@@ -50,7 +50,7 @@ export function kabukKur(profil) {
   kapat.onclick = () => uygulama.classList.remove("menu-acik");
 
   const marka = document.createElement("div");
-  marka.className = "yan-marka"; marka.innerHTML = 'Yuvarlak <span>Bar</span>';
+  marka.className = "yan-marka"; marka.innerHTML = 'LEGEND OF THE <span>WEST</span>';
 
   const kim = document.createElement("div");
   kim.className = "yan-kim"; kim.textContent = profil.ad + " · " + profil.rol;
