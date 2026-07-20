@@ -137,6 +137,14 @@
     function bilgi(m) { const k = el("mesaj"); k.textContent = m; k.className = "mesaj bilgi"; }
     function mesajGizle() { el("mesaj").className = "mesaj gizli"; }
 
+    // Müşteri ekranı (2. monitör) ile aynı tarayıcıda anlık haberleşme.
+    let ekranKanal = null;
+    try { ekranKanal = new BroadcastChannel("yb-ekran"); } catch (e) { /* desteklenmiyorsa localStorage yeter */ }
+    function ekranGonder(veri) {
+      try { localStorage.setItem("yb-ekran-son", JSON.stringify(veri)); } catch (e) {}
+      try { if (ekranKanal) ekranKanal.postMessage(veri); } catch (e) {}
+    }
+
     async function bugunCip() {
       try { const g = await bugunGetir(); el("cipCiro").textContent = kurusYaz(g.ciroKurus || 0); el("cipKar").textContent = kurusYaz(g.karKurus || 0); }
       catch (h) { /* çip hatası satışı engellemesin */ }
@@ -148,6 +156,7 @@
         const [masalar, aktif, kategoriler] = await Promise.all([masalariGetir(), urunleriGetir(true), kategorileriGetir(true)]);
         tumMasalar = masalar; urunler = aktif; kategoriAdlari = kategoriler.map((k) => k.ad);
         masalariCiz();
+        ekranGonder({ durum: "BOSTA" });
         bugunCip();
       } catch (h) { mesaj(h.message); }
     }
@@ -201,6 +210,12 @@
       el("kalan").textContent = kurusYaz(ozet.kalanKurus);
       mevcutKalan = ozet.kalanKurus;
       odemeListeCiz(ozet.odemeler);
+      ekranGonder({
+        durum: "HESAP",
+        masaAd: seciliMasa ? seciliMasa.ad : "",
+        satirlar: ozet.satirlar.map((s) => ({ ad: satirEtiketi(s), adet: s.netAdet, tutarKurus: s.araToplamKurus })),
+        toplamKurus: ozet.ciroKurus, odenenKurus: ozet.odenenKurus, kalanKurus: ozet.kalanKurus,
+      });
       bugunCip();
     }
 

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Legend of the West — Müşteri Ekranı</title>
+  <style>
+    :root{ --altin:#e6c168; --altin2:#d9a441; --bg1:#2c1c10; --bg2:#160f08; --soluk:#b79a6a; }
+    *{ box-sizing:border-box; margin:0; padding:0; }
+    html,body{ height:100%; }
+    body{
+      background: radial-gradient(circle at 50% 30%, var(--bg1) 0%, #21160c 45%, var(--bg2) 100%);
+      color:#f2e6cf; font-family: Georgia, "Times New Roman", serif; overflow:hidden;
+      height:100vh; width:100vw;
+    }
+    .ekran{ height:100vh; display:flex; flex-direction:column; }
+
+    /* ---- Boşta: karşılama ---- */
+    #bosta{ height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:18px; }
+    #bosta .star{ width:120px; height:120px; filter: drop-shadow(0 0 18px rgba(230,193,104,.35)); animation: par 3.5s ease-in-out infinite; }
+    @keyframes par{ 0%,100%{ filter: drop-shadow(0 0 12px rgba(230,193,104,.25)); } 50%{ filter: drop-shadow(0 0 26px rgba(230,193,104,.55)); } }
+    #bosta .marka{ font-size: clamp(40px, 8vw, 92px); font-weight:700; letter-spacing:6px; color:var(--altin); line-height:1; text-shadow:0 3px 8px rgba(0,0,0,.6); }
+    #bosta .marka .w{ color:var(--altin2); }
+    #bosta .orta{ font-size: clamp(16px,2.4vw,26px); letter-spacing:10px; color:var(--soluk); }
+    #bosta .hos{ margin-top:14px; font-size: clamp(22px,3.4vw,40px); color:#f2e6cf; letter-spacing:3px; }
+
+    /* ---- Hesap ---- */
+    #hesap{ display:none; height:100vh; flex-direction:column; padding: 3vh 4vw; }
+    #hesap.acik{ display:flex; }
+    .h-ust{ display:flex; align-items:baseline; justify-content:space-between; border-bottom:2px solid rgba(230,193,104,.4); padding-bottom:14px; }
+    .h-marka{ font-size: clamp(22px,3vw,38px); font-weight:700; letter-spacing:3px; color:var(--altin); }
+    .h-marka .w{ color:var(--altin2); }
+    .h-masa{ font-size: clamp(20px,2.6vw,34px); color:#f2e6cf; }
+    .h-liste{ flex:1; overflow:auto; margin:2vh 0; }
+    .h-satir{ display:flex; justify-content:space-between; align-items:center; gap:16px; padding:10px 2px; border-bottom:1px solid rgba(255,255,255,.08); font-size: clamp(20px,2.6vw,32px); }
+    .h-satir .ad{ color:#f2e6cf; }
+    .h-satir .ad .ad-adet{ color:var(--altin); font-weight:700; margin-right:10px; }
+    .h-satir .tut{ color:#f2e6cf; white-space:nowrap; }
+    .h-bos{ color:var(--soluk); font-size: clamp(18px,2.2vw,26px); text-align:center; padding:6vh 0; }
+    .h-alt{ border-top:2px solid rgba(230,193,104,.4); padding-top:16px; }
+    .h-toplam{ display:flex; justify-content:space-between; align-items:baseline; }
+    .h-toplam .et{ font-size: clamp(24px,3vw,40px); color:var(--soluk); letter-spacing:2px; }
+    .h-toplam .dg{ font-size: clamp(40px,6vw,84px); font-weight:700; color:var(--altin); }
+    .h-odeme{ display:flex; justify-content:flex-end; gap:28px; margin-top:8px; font-size: clamp(16px,2vw,26px); color:var(--soluk); }
+    .h-odeme b{ color:#f2e6cf; }
+    .h-kalan b{ color:#ffcf6b; }
+  </style>
+</head>
+<body>
+  <div class="ekran">
+    <!-- Boşta: karşılama -->
+    <div id="bosta">
+      <svg class="star" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#f3d489"/><stop offset="1" stop-color="#c8952f"/>
+        </linearGradient></defs>
+        <polygon fill="url(#g)" stroke="#8a5a12" stroke-width="1.5"
+          points="50,4 61,38 97,38 68,60 79,95 50,73 21,95 32,60 3,38 39,38"/>
+      </svg>
+      <div class="marka">LEGEND OF THE <span class="w">WEST</span></div>
+      <div class="orta">· BAR ·</div>
+      <div class="hos">Hoş Geldiniz</div>
+    </div>
+
+    <!-- Hesap -->
+    <div id="hesap">
+      <div class="h-ust">
+        <div class="h-marka">LEGEND OF THE <span class="w">WEST</span></div>
+        <div class="h-masa" id="hMasa"></div>
+      </div>
+      <div class="h-liste" id="hListe"></div>
+      <div class="h-alt">
+        <div class="h-toplam"><span class="et">TOPLAM</span><span class="dg" id="hToplam">0,00 ₺</span></div>
+        <div class="h-odeme" id="hOdeme" style="display:none;">
+          <span>Ödenen: <b id="hOdenen">0,00 ₺</b></span>
+          <span class="h-kalan">Kalan: <b id="hKalan">0,00 ₺</b></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const el = (id) => document.getElementById(id);
+    function tl(k){ return ((k||0)/100).toLocaleString("tr-TR",{minimumFractionDigits:2,maximumFractionDigits:2}) + " ₺"; }
+
+    function ciz(v){
+      if (!v || v.durum !== "HESAP") {
+        el("bosta").style.display = "flex";
+        el("hesap").classList.remove("acik");
+        return;
+      }
+      el("bosta").style.display = "none";
+      el("hesap").classList.add("acik");
+      el("hMasa").textContent = v.masaAd || "";
+      const liste = el("hListe");
+      const satirlar = v.satirlar || [];
+      liste.innerHTML = satirlar.length ? "" : '<div class="h-bos">Sipariş bekleniyor…</div>';
+      for (const s of satirlar){
+        const row = document.createElement("div"); row.className = "h-satir";
+        row.innerHTML = '<span class="ad"><span class="ad-adet">' + s.adet + '×</span>' + (s.ad||"") + '</span>' +
+                        '<span class="tut">' + tl(s.tutarKurus) + '</span>';
+        liste.appendChild(row);
+      }
+      el("hToplam").textContent = tl(v.toplamKurus);
+      // Kısmi ödeme varsa ödenen/kalan göster
+      if ((v.odenenKurus||0) > 0){
+        el("hOdeme").style.display = "flex";
+        el("hOdenen").textContent = tl(v.odenenKurus);
+        el("hKalan").textContent = tl(v.kalanKurus);
+      } else {
+        el("hOdeme").style.display = "none";
+      }
+    }
+
+    // İlk açılışta son durumu localStorage'dan al (kasa ekranıyla aynı tarayıcı)
+    try { ciz(JSON.parse(localStorage.getItem("yb-ekran-son") || "null")); } catch(e){ ciz(null); }
+
+    // Kasadan gelen canlı güncellemeler
+    try {
+      const ch = new BroadcastChannel("yb-ekran");
+      ch.onmessage = (e) => ciz(e.data);
+    } catch(e){ /* BroadcastChannel yoksa localStorage değişimini dinle */ }
+    window.addEventListener("storage", (e) => {
+      if (e.key === "yb-ekran-son") { try { ciz(JSON.parse(e.newValue||"null")); } catch(_){} }
+    });
+  </script>
+</body>
+</html>
