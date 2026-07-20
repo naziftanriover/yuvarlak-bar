@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Yuvarlak Bar — Satış</title>
+  <link rel="stylesheet" href="/stil.css" />
+</head>
+<body>
+  <div class="baslik">
+    <h1><span class="marka">Yuvarlak Bar</span> · Satış</h1>
+    <div>
+      <span class="kim" id="kim"></span>
+      <button class="dugme-kucuk" onclick="cikisYap()">Çıkış</button>
+    </div>
+  </div>
+
+  <div class="kapsayici">
+    <div id="mesaj" class="mesaj gizli"></div>
+
+    <!-- MASA LISTESI -->
+    <div id="masaGorunum">
+      <div class="bolum">
+        <h2>Masalar</h2>
+        <div id="masaIzgara" class="izgara"></div>
+      </div>
+
+      <div class="bolum">
+        <h2>Ayarlar — Ürün / Masa ekle</h2>
+        <div style="display:grid; gap:16px; grid-template-columns: 1fr 1fr;">
+          <form id="urunForm">
+            <label>Ürün adı</label><input id="uAd" required />
+            <label>Kategori</label><input id="uKategori" required />
+            <label>Satış fiyatı (TL)</label><input id="uFiyat" type="number" step="0.01" min="0" required />
+            <label>Maliyet (TL)</label><input id="uMaliyet" type="number" step="0.01" min="0" required />
+            <label>Stok adedi</label><input id="uStok" type="number" min="0" value="0" required />
+            <button class="dugme-vurgu dugme-blok" type="submit">Ürün ekle</button>
+          </form>
+          <form id="masaForm">
+            <label>Masa adı</label><input id="mAd" placeholder="Örn: Masa 5" required />
+            <button class="dugme-blok" type="submit">Masa ekle</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADISYON DETAY -->
+    <div id="detayGorunum" class="gizli">
+      <button class="geri" onclick="geriDon()">← Masalara dön</button>
+      <div class="bolum">
+        <h2 id="detayBaslik">Masa</h2>
+        <div id="ozetSatirlar"></div>
+        <div class="ozet-satir"><span class="etiket">Toplam</span><span id="ciro"></span></div>
+        <div class="ozet-satir"><span class="etiket">Ödenen</span><span id="odenen"></span></div>
+        <div class="ozet-satir buyuk"><span>Kalan</span><span id="kalan" class="deger-vurgu"></span></div>
+      </div>
+
+      <div class="bolum">
+        <h2>Ürün ekle</h2>
+        <div id="urunIzgara" class="izgara"></div>
+      </div>
+
+      <div class="bolum">
+        <h2>Ödeme</h2>
+        <label>Tutar (TL)</label>
+        <input id="odemeTutar" type="number" step="0.01" min="0" />
+        <div style="display:flex; gap:10px;">
+          <button class="dugme-yesil" style="flex:1" onclick="odemeAl('NAKIT')">Nakit al</button>
+          <button class="dugme-yesil" style="flex:1" onclick="odemeAl('KART')">Kart al</button>
+        </div>
+        <button class="dugme-vurgu dugme-blok" style="margin-top:12px" onclick="hesapKapat()">Hesabı kapat</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/ortak.js"></script>
+  <script>
+    korumaKontrol();
+    document.getElementById("kim").textContent = adAl() + " (" + rolAl() + ")";
+
+    let urunler = [];
+    let seciliAdisyonId = null;
+
+    async function yukle() {
+      try {
+        const [masalar, aktifUrunler] = await Promise.all([
+          apiCagir("GET", "/masalar"),
+          apiCagir("GET", "/urunler"),
+        ]);
+        urunler = aktifUrunler;
+        masalariCiz(masalar);
+      } catch (hata) {
+        mesajGoster("mesaj", hata.message, "hata");
+      }
+    }
+
+    function masalariCiz(masalar) {
+      const izgara = document.getElementById("masaIzgara");
+      izgara.innerHTML = "";
+      if (masalar.length === 0) {
+        izgara.innerHTML = '<div class="kart alt">Henüz masa yok. Aşağıdan ekleyin.</div>';
+        return;
+      }
+      for (const masa of masalar) {
+        const dugme = document.createElement("button");
+        const dolu = masa.durum === "DOLU";
+        dugme.className = "masa " + (dolu ? "dolu" : "bos");
+        dugme.innerHTML = '<span>' + masa.ad + '</span><span class="durum">' + (dolu ? "Dolu" : "Boş") + '</span>';
+        dugme.onclick = () => masaSec(masa);
+        izgara.appendChild(dugme);
+      }
+    }
+
+    async function masaSec(masa) {
+      mesajGizle("mesaj");
+      try {
+        let adisyonId = masa.acikAdisyonId;
+        if (masa.durum !== "DOLU") {
+          const adisyon = await apiCagir("POST", "/adisyon/ac", { masaId: masa.id });
+          adisyonId = adisyon.id;
+        }
+        seciliAdisyonId = adisyonId;
+        document.getElementById("detayBaslik").textContent = masa.ad;
+        gorunumDegistir(true);
+        urunButonlariCiz();
+        await ozetYukle();
+      } catch (hata) {
+        mesajGoster("mesaj", hata.message, "hata");
+      }
+    }
+
+    function urunButonlariCiz() {
+      const izgara = document.getElementById("urunIzgara");
+      izgara.innerHTML = "";
+      if (urunler.length === 0) {
+        izgara.innerHTML = '<div class="kart alt">Henüz ürün yok.</div>';
+        return;
+      }
+      for (const urun of urunler) {
+        const dugme = document.createElement("button");
+        dugme.className = "kart";
+        dugme.innerHTML = '<span class="ad">' + urun.ad + '</span><span class="alt">' + kurusYaz(urun.satisFiyatiKurus) + '</span>';
+        dugme.onclick = () => siparisEkle(urun.id);
+        izgara.appendChild(dugme);
+      }
+    }
+
+    async function siparisEkle(urunId) {
+      try {
+        await apiCagir("POST", "/adisyon/siparis", { adisyonId: seciliAdisyonId, urunId, adet: 1 });
+        await ozetYukle();
+      } catch (hata) {
+        mesajGoster("mesaj", hata.message, "hata");
+      }
+    }
+
+    async function iptalEt(urunId) {
+      const sebep = window.prompt("İptal sebebi (zorunlu):");
+      if (!sebep || sebep.trim() === "") return;
+      try {
+        await apiCagir("POST", "/adisyon/iptal", { adisyonId: seciliAdisyonId, urunId, adet: 1, sebep });
+        await ozetYukle();
+      } catch (hata) {
+        mesajGoster("mesaj", hata.message, "hata");
+      }
+    }
+
+    async function ozetYukle() {
+      const ozet = await apiCagir("POST", "/adisyon/ozet", { adisyonId: seciliAdisyonId });
+      const kap = document.getElementById("ozetSatirlar");
+      kap.innerHTML = "";
+      if (ozet.satirlar.length === 0) {
+        kap.innerHTML = '<div class="satir"><span class="alt">Henüz sipariş yok.</span></div>';
+      }
+      for (const satir of ozet.satirlar) {
+        const el = document.createElement("div");
+        el.className = "satir";
+        el.innerHTML =
+          '<span>' + satir.netAdet + ' × ' + satir.urunAdi + '</span>' +
+          '<span style="display:flex; gap:10px; align-items:center;">' +
+          '<b>' + kurusYaz(satir.araToplamKurus) + '</b>' +
+          '<button class="dugme-kirmizi dugme-kucuk" data-urun="' + satir.urunId + '">İptal</button>' +
+          '</span>';
+        el.querySelector("button").onclick = () => iptalEt(satir.urunId);
+        kap.appendChild(el);
+      }
+      document.getElementById("ciro").textContent = kurusYaz(ozet.ciroKurus);
+      document.getElementById("odenen").textContent = kurusYaz(ozet.odenenKurus);
+      document.getElementById("kalan").textContent = kurusYaz(ozet.kalanKurus);
+      document.getElementById("odemeTutar").value = (ozet.kalanKurus / 100).toFixed(2);
+    }
+
+    async function odemeAl(yontem) {
+      const tl = parseFloat(document.getElementById("odemeTutar").value);
+      if (!(tl > 0)) {
+        mesajGoster("mesaj", "Geçerli bir tutar girin.", "hata");
+        return;
+      }
+      try {
+        await apiCagir("POST", "/adisyon/odeme", {
+          adisyonId: seciliAdisyonId,
+          tutarKurus: Math.round(tl * 100),
+          yontem,
+        });
+        await ozetYukle();
+      } catch (hata) {
+        mesajGoster("mesaj", hata.message, "hata");
+      }
+    }
+
+    async function hesapKapat() {
+      if (!window.confirm("Hesap kapatılsın mı?")) return;
+      try {
+        await apiCagir("POST", "/adisyon/kapat", { adisyonId: seciliAdisyonId });
+        geriDon();
+      } catch (hata) {
+        mesajGoster("mesaj", hata.message, "hata");
+      }
+    }
+
+    function gorunumDegistir(detay) {
+      document.getElementById("detayGorunum").classList.toggle("gizli", !detay);
+      document.getElementById("masaGorunum").classList.toggle("gizli", detay);
+    }
+    function geriDon() {
+      seciliAdisyonId = null;
+      gorunumDegistir(false);
+      yukle();
+    }
+
+    // Ayarlar: urun ekle
+    document.getElementById("urunForm").addEventListener("submit", async (olay) => {
+      olay.preventDefault();
+      try {
+        await apiCagir("POST", "/urunler", {
+          id: crypto.randomUUID(),
+          ad: document.getElementById("uAd").value.trim(),
+          kategori: document.getElementById("uKategori").value.trim(),
+          satisFiyatiKurus: Math.round(parseFloat(document.getElementById("uFiyat").value) * 100),
+          maliyetKurus: Math.round(parseFloat(document.getElementById("uMaliyet").value) * 100),
+          stokAdedi: parseInt(document.getElementById("uStok").value, 10),
+        });
+        olay.target.reset();
+        mesajGoster("mesaj", "Ürün eklendi.", "bilgi");
+        yukle();
+      } catch (hata) {
+        mesajGoster("mesaj", hata.message, "hata");
+      }
+    });
+
+    // Ayarlar: masa ekle
+    document.getElementById("masaForm").addEventListener("submit", async (olay) => {
+      olay.preventDefault();
+      try {
+        await apiCagir("POST", "/masalar", { id: crypto.randomUUID(), ad: document.getElementById("mAd").value.trim() });
+        olay.target.reset();
+        mesajGoster("mesaj", "Masa eklendi.", "bilgi");
+        yukle();
+      } catch (hata) {
+        mesajGoster("mesaj", hata.message, "hata");
+      }
+    });
+
+    yukle();
+  </script>
+</body>
+</html>

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Yuvarlak Bar — Sipariş</title>
+  <link rel="stylesheet" href="/stil.css" />
+</head>
+<body>
+  <div class="baslik">
+    <h1><span class="marka">Yuvarlak Bar</span> · Sipariş</h1>
+    <div>
+      <span class="kim" id="kim"></span>
+      <button class="dugme-kucuk" onclick="cikisYap()">Çıkış</button>
+    </div>
+  </div>
+
+  <div class="kapsayici">
+    <div id="mesaj" class="mesaj gizli"></div>
+
+    <div id="masaGorunum">
+      <div class="bolum">
+        <h2>Masalar — birini seçin</h2>
+        <div id="masaIzgara" class="izgara"></div>
+      </div>
+    </div>
+
+    <div id="detayGorunum" class="gizli">
+      <button class="geri" onclick="geriDon()">← Masalara dön</button>
+      <div class="bolum">
+        <h2 id="detayBaslik">Masa</h2>
+        <div id="ozetSatirlar"></div>
+        <div class="ozet-satir buyuk"><span>Toplam</span><span id="ciro" class="deger-vurgu"></span></div>
+      </div>
+      <div class="bolum">
+        <h2>Ürün ekle</h2>
+        <div id="urunIzgara" class="izgara"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/ortak.js"></script>
+  <script>
+    korumaKontrol();
+    document.getElementById("kim").textContent = adAl() + " (" + rolAl() + ")";
+
+    let urunler = [];
+    let seciliAdisyonId = null;
+
+    async function yukle() {
+      try {
+        const [masalar, aktifUrunler] = await Promise.all([
+          apiCagir("GET", "/masalar"),
+          apiCagir("GET", "/urunler"),
+        ]);
+        urunler = aktifUrunler;
+        masalariCiz(masalar);
+      } catch (hata) {
+        mesajGoster("mesaj", hata.message, "hata");
+      }
+    }
+
+    function masalariCiz(masalar) {
+      const izgara = document.getElementById("masaIzgara");
+      izgara.innerHTML = "";
+      if (masalar.length === 0) {
+        izgara.innerHTML = '<div class="kart alt">Henüz masa yok.</div>';
+        return;
+      }
+      for (const masa of masalar) {
+        const dolu = masa.durum === "DOLU";
+        const dugme = document.createElement("button");
+        dugme.className = "masa " + (dolu ? "dolu" : "bos");
+        dugme.innerHTML = '<span>' + masa.ad + '</span><span class="durum">' + (dolu ? "Dolu" : "Boş") + '</span>';
+        dugme.onclick = () => masaSec(masa);
+        izgara.appendChild(dugme);
+      }
+    }
+
+    async function masaSec(masa) {
+      mesajGizle("mesaj");
+      try {
+        let adisyonId = masa.acikAdisyonId;
+        if (masa.durum !== "DOLU") {
+          const adisyon = await apiCagir("POST", "/adisyon/ac", { masaId: masa.id });
+          adisyonId = adisyon.id;
+        }
+        seciliAdisyonId = adisyonId;
+        document.getElementById("detayBaslik").textContent = masa.ad;
+        gorunumDegistir(true);
+        urunButonlariCiz();
+        await ozetYukle();
+      } catch (hata) {
+        mesajGoster("mesaj", hata.message, "hata");
+      }
+    }
+
+    function urunButonlariCiz() {
+      const izgara = document.getElementById("urunIzgara");
+      izgara.innerHTML = "";
+      if (urunler.length === 0) {
+        izgara.innerHTML = '<div class="kart alt">Henüz ürün yok.</div>';
+        return;
+      }
+      for (const urun of urunler) {
+        const dugme = document.createElement("button");
+        dugme.className = "kart";
+        dugme.innerHTML = '<span class="ad">' + urun.ad + '</span><span class="alt">' + kurusYaz(urun.satisFiyatiKurus) + '</span>';
+        dugme.onclick = () => siparisEkle(urun.id);
+        izgara.appendChild(dugme);
+      }
+    }
+
+    async function siparisEkle(urunId) {
+      try {
+        await apiCagir("POST", "/adisyon/siparis", { adisyonId: seciliAdisyonId, urunId, adet: 1 });
+        await ozetYukle();
+      } catch (hata) {
+        mesajGoster("mesaj", hata.message, "hata");
+      }
+    }
+
+    async function iptalEt(urunId) {
+      const sebep = window.prompt("İptal sebebi (zorunlu):");
+      if (!sebep || sebep.trim() === "") return;
+      try {
+        await apiCagir("POST", "/adisyon/iptal", { adisyonId: seciliAdisyonId, urunId, adet: 1, sebep });
+        await ozetYukle();
+      } catch (hata) {
+        mesajGoster("mesaj", hata.message, "hata");
+      }
+    }
+
+    async function ozetYukle() {
+      const ozet = await apiCagir("POST", "/adisyon/ozet", { adisyonId: seciliAdisyonId });
+      const kap = document.getElementById("ozetSatirlar");
+      kap.innerHTML = "";
+      if (ozet.satirlar.length === 0) {
+        kap.innerHTML = '<div class="satir"><span class="alt">Henüz sipariş yok.</span></div>';
+      }
+      for (const satir of ozet.satirlar) {
+        const el = document.createElement("div");
+        el.className = "satir";
+        el.innerHTML =
+          '<span>' + satir.netAdet + ' × ' + satir.urunAdi + '</span>' +
+          '<span style="display:flex; gap:10px; align-items:center;">' +
+          '<b>' + kurusYaz(satir.araToplamKurus) + '</b>' +
+          '<button class="dugme-kirmizi dugme-kucuk">İptal</button></span>';
+        el.querySelector("button").onclick = () => iptalEt(satir.urunId);
+        kap.appendChild(el);
+      }
+      document.getElementById("ciro").textContent = kurusYaz(ozet.ciroKurus);
+    }
+
+    function gorunumDegistir(detay) {
+      document.getElementById("detayGorunum").classList.toggle("gizli", !detay);
+      document.getElementById("masaGorunum").classList.toggle("gizli", detay);
+    }
+    function geriDon() {
+      seciliAdisyonId = null;
+      gorunumDegistir(false);
+      yukle();
+    }
+
+    yukle();
+  </script>
+</body>
+</html>

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Yuvarlak Bar — Rapor</title>
+  <link rel="stylesheet" href="/stil.css" />
+</head>
+<body>
+  <div class="baslik">
+    <h1><span class="marka">Yuvarlak Bar</span> · Rapor</h1>
+    <div>
+      <span class="kim" id="kim"></span>
+      <button class="dugme-kucuk" onclick="location.href='/kullanicilar.html'">Kullanıcılar</button>
+      <button class="dugme-kucuk" onclick="cikisYap()">Çıkış</button>
+    </div>
+  </div>
+
+  <div class="kapsayici">
+    <div id="mesaj" class="mesaj gizli"></div>
+
+    <!-- ANLIK ACIK MASALAR -->
+    <div class="bolum">
+      <h2>Anlık durum — açık masalar</h2>
+      <div class="istat">
+        <div class="kutu"><div class="sayi" id="acikMasa">0</div><div class="etiket">Açık masa</div></div>
+        <div class="kutu"><div class="sayi deger-vurgu" id="acikCiro">0,00 ₺</div><div class="etiket">Açık ciro</div></div>
+        <div class="kutu"><div class="sayi deger-yesil" id="acikKar">0,00 ₺</div><div class="etiket">Açık kâr</div></div>
+      </div>
+      <div style="margin-top:12px; text-align:right;">
+        <span class="kim" id="guncelleme"></span>
+        <button class="dugme-kucuk" onclick="anlikYenile()">Yenile</button>
+      </div>
+      <div id="acikDetay" style="margin-top:8px;"></div>
+    </div>
+
+    <!-- GECELIK RAPOR -->
+    <div class="bolum">
+      <h2>Gecelik rapor (kapanmış hesaplar)</h2>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+        <div style="flex:1; min-width:150px;">
+          <label>Başlangıç</label><input id="bas" type="datetime-local" />
+        </div>
+        <div style="flex:1; min-width:150px;">
+          <label>Bitiş</label><input id="bit" type="datetime-local" />
+        </div>
+        <button class="dugme-vurgu" onclick="raporGetir()">Rapor getir</button>
+      </div>
+
+      <div id="raporSonuc" class="gizli" style="margin-top:14px;">
+        <div class="istat">
+          <div class="kutu"><div class="sayi" id="rAdisyon">0</div><div class="etiket">Kapanan hesap</div></div>
+          <div class="kutu"><div class="sayi deger-vurgu" id="rCiro">0,00 ₺</div><div class="etiket">Ciro</div></div>
+          <div class="kutu"><div class="sayi deger-yesil" id="rKar">0,00 ₺</div><div class="etiket">Kâr</div></div>
+        </div>
+        <div class="istat" style="margin-top:12px;">
+          <div class="kutu"><div class="sayi" id="rNakit">0,00 ₺</div><div class="etiket">Nakit</div></div>
+          <div class="kutu"><div class="sayi" id="rKart">0,00 ₺</div><div class="etiket">Kart</div></div>
+          <div class="kutu" style="display:flex; align-items:center; justify-content:center;">
+            <button class="dugme-vurgu" onclick="geceKapat()">Geceyi kapat</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DENETIM: IPTALLER + FIYAT DEGISIKLIKLERI -->
+    <div class="bolum">
+      <h2>Denetim — iptaller ve fiyat değişiklikleri</h2>
+      <div id="iptalListe"><div class="satir"><span class="alt">Rapor getirince burada görünür.</span></div></div>
+      <div id="denetimListe"></div>
+    </div>
+
+    <!-- GECMIS GECE KAPANISLARI -->
+    <div class="bolum">
+      <h2>Geçmiş gece kapanışları</h2>
+      <div id="gecmisListe"></div>
+    </div>
+  </div>
+
+  <script src="/ortak.js"></script>
+  <script>
+    korumaKontrol();
+    document.getElementById("kim").textContent = adAl() + " (" + rolAl() + ")";
+
+    function iki(n) { return String(n).padStart(2, "0"); }
+    function inputBicimi(d) {
+      return d.getFullYear() + "-" + iki(d.getMonth() + 1) + "-" + iki(d.getDate()) + "T" + iki(d.getHours()) + ":" + iki(d.getMinutes());
+    }
+    // Varsayilan: bugun 00:00 -> yarin 00:00
+    (function tarihVarsayilan() {
+      const bas = new Date(); bas.setHours(0, 0, 0, 0);
+      const bit = new Date(bas); bit.setDate(bit.getDate() + 1);
+      document.getElementById("bas").value = inputBicimi(bas);
+      document.getElementById("bit").value = inputBicimi(bit);
+    })();
+
+    function araligiAl() {
+      const b = document.getElementById("bas").value;
+      const s = document.getElementById("bit").value;
+      return { baslangic: new Date(b).toISOString(), bitis: new Date(s).toISOString() };
+    }
+
+    // --- Anlik acik masalar ---
+    async function anlikYenile() {
+      mesajGizle("mesaj");
+      try {
+        const masalar = await apiCagir("GET", "/masalar");
+        const dolu = masalar.filter((m) => m.durum === "DOLU" && m.acikAdisyonId);
+        let ciro = 0, kar = 0;
+        const detay = document.getElementById("acikDetay");
+        detay.innerHTML = "";
+        for (const masa of dolu) {
+          const ozet = await apiCagir("POST", "/adisyon/ozet", { adisyonId: masa.acikAdisyonId });
+          ciro += ozet.ciroKurus; kar += ozet.karKurus;
+          const el = document.createElement("div");
+          el.className = "satir";
+          el.innerHTML = "<span><b>" + masa.ad + "</b></span><span class='alt'>Ciro: <b class='deger-vurgu'>" +
+            kurusYaz(ozet.ciroKurus) + "</b> · Kâr: <b class='deger-yesil'>" + kurusYaz(ozet.karKurus) + "</b></span>";
+          detay.appendChild(el);
+        }
+        document.getElementById("acikMasa").textContent = dolu.length;
+        document.getElementById("acikCiro").textContent = kurusYaz(ciro);
+        document.getElementById("acikKar").textContent = kurusYaz(kar);
+        document.getElementById("guncelleme").textContent = "Güncelleme: " + new Date().toLocaleTimeString("tr-TR") + " · ";
+      } catch (hata) {
+        mesajGoster("mesaj", hata.message, "hata");
+      }
+    }
+
+    // --- Gecelik rapor + denetim ---
+    async function raporGetir() {
+      mesajGizle("mesaj");
+      const aralik = araligiAl();
+      try {
+        const ozet = await apiCagir("POST", "/rapor/gecelik", aralik);
+        document.getElementById("rAdisyon").textContent = ozet.adisyonSayisi;
+        document.getElementById("rCiro").textContent = kurusYaz(ozet.ciroKurus);
+        document.getElementById("rKar").textContent = kurusYaz(ozet.karKurus);
+        document.getElementById("rNakit").textContent = kurusYaz(ozet.nakitKurus);
+        document.getElementById("rKart").textContent = kurusYaz(ozet.kartKurus);
+        document.getElementById("raporSonuc").classList.remove("gizli");
+
+        const iptaller = await apiCagir("POST", "/rapor/iptaller", aralik);
+        const iptalKap = document.getElementById("iptalListe");
+        iptalKap.innerHTML = iptaller.length === 0 ? "<div class='satir'><span class='alt'>Bu dönemde iptal yok.</span></div>" : "";
+        for (const ip of iptaller) {
+          const el = document.createElement("div");
+          el.className = "satir";
+          el.innerHTML = "<span>❌ " + ip.adet + " × " + ip.urunAdi + " <span class='alt'>(" + (ip.sebep || "") + ")</span></span>" +
+            "<span class='alt'>" + new Date(ip.zaman).toLocaleString("tr-TR") + "</span>";
+          iptalKap.appendChild(el);
+        }
+
+        const denetim = await apiCagir("POST", "/rapor/denetim", aralik);
+        const denKap = document.getElementById("denetimListe");
+        denKap.innerHTML = "";
+        for (const d of denetim) {
+          const el = document.createElement("div");
+          el.className = "satir";
+          el.innerHTML = "<span>💲 " + d.aciklama + "</span><span class='alt'>" + new Date(d.zaman).toLocaleString("tr-TR") + "</span>";
+          denKap.appendChild(el);
+        }
+      } catch (hata) {
+        mesajGoster("mesaj", hata.message, "hata");
+      }
+    }
+
+    async function geceKapat() {
+      if (!window.confirm("Bu dönem için gece kapanışı yapılsın mı? Kapanış kilitli bir kayıttır.")) return;
+      try {
+        await apiCagir("POST", "/gece/kapat", araligiAl());
+        mesajGoster("mesaj", "Gece kapanışı yapıldı.", "bilgi");
+        gecmisYukle();
+      } catch (hata) {
+        mesajGoster("mesaj", hata.message, "hata");
+      }
+    }
+
+    async function gecmisYukle() {
+      try {
+        const gecmis = await apiCagir("GET", "/gece/gecmis");
+        const kap = document.getElementById("gecmisListe");
+        kap.innerHTML = gecmis.length === 0 ? "<div class='satir'><span class='alt'>Henüz gece kapanışı yok.</span></div>" : "";
+        for (const g of gecmis) {
+          const el = document.createElement("div");
+          el.className = "satir";
+          el.innerHTML = "<span><b>" + new Date(g.zaman).toLocaleDateString("tr-TR") + "</b> " +
+            "<span class='alt'>· " + g.adisyonSayisi + " hesap</span></span>" +
+            "<span class='alt'>Ciro: <b class='deger-vurgu'>" + kurusYaz(g.ciroKurus) + "</b> · Kâr: <b class='deger-yesil'>" + kurusYaz(g.karKurus) + "</b></span>";
+          kap.appendChild(el);
+        }
+      } catch (hata) {
+        mesajGoster("mesaj", hata.message, "hata");
+      }
+    }
+
+    anlikYenile();
+    gecmisYukle();
+    setInterval(anlikYenile, 15000);
+  </script>
+</body>
+</html>

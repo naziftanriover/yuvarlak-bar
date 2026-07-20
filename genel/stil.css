@@ -1,0 +1,130 @@
+/* Yuvarlak Bar - ortak stiller. Telefon oncelikli, sade ve okunakli. */
+:root {
+  --arka: #14110f;
+  --yuzey: #1f1b18;
+  --yuzey-2: #2a2420;
+  --kenar: #3a322c;
+  --metin: #f3ece4;
+  --soluk: #a99e92;
+  --vurgu: #e0a458;
+  --vurgu-koyu: #c8873a;
+  --yesil: #4caf72;
+  --kirmizi: #d9694f;
+  --mavi: #5b8fd6;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--arka);
+  color: var(--metin);
+  -webkit-font-smoothing: antialiased;
+}
+
+.baslik {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: var(--yuzey);
+  border-bottom: 1px solid var(--kenar);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.baslik h1 { font-size: 18px; margin: 0; letter-spacing: 0.3px; }
+.baslik .marka { color: var(--vurgu); }
+.baslik .kim { font-size: 13px; color: var(--soluk); }
+
+.kapsayici { max-width: 920px; margin: 0 auto; padding: 16px; }
+
+.bolum {
+  background: var(--yuzey);
+  border: 1px solid var(--kenar);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.bolum h2 { font-size: 15px; margin: 0 0 12px; color: var(--soluk); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+
+.izgara {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 10px;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: var(--yuzey-2);
+  color: var(--metin);
+  border: 1px solid var(--kenar);
+  transition: transform 0.05s ease, background 0.15s ease;
+}
+button:active { transform: scale(0.97); }
+button:hover { background: var(--kenar); }
+
+.dugme-vurgu { background: var(--vurgu); color: #241a0e; border-color: var(--vurgu-koyu); font-weight: 600; }
+.dugme-vurgu:hover { background: var(--vurgu-koyu); }
+.dugme-yesil { background: var(--yesil); color: #08160d; border-color: var(--yesil); font-weight: 600; }
+.dugme-kirmizi { background: transparent; color: var(--kirmizi); border-color: var(--kirmizi); }
+.dugme-kucuk { padding: 6px 10px; font-size: 13px; }
+.dugme-blok { width: 100%; }
+
+.kart {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.kart .ad { font-weight: 600; }
+.kart .alt { font-size: 13px; color: var(--soluk); }
+
+.masa { aspect-ratio: 1 / 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-weight: 600; }
+.masa.bos { border-style: dashed; color: var(--soluk); }
+.masa.dolu { background: var(--yuzey-2); border-color: var(--vurgu); }
+.masa .durum { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+.masa.dolu .durum { color: var(--vurgu); }
+
+.satir { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--kenar); }
+.satir:last-child { border-bottom: none; }
+
+.ozet-satir { display: flex; justify-content: space-between; padding: 6px 0; }
+.ozet-satir.buyuk { font-size: 20px; font-weight: 700; border-top: 1px solid var(--kenar); margin-top: 8px; padding-top: 12px; }
+.ozet-satir .etiket { color: var(--soluk); }
+.deger-yesil { color: var(--yesil); }
+.deger-vurgu { color: var(--vurgu); }
+
+input, select {
+  font: inherit;
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--kenar);
+  background: var(--yuzey-2);
+  color: var(--metin);
+  margin-bottom: 10px;
+}
+label { display: block; font-size: 13px; color: var(--soluk); margin-bottom: 4px; }
+
+.mesaj { padding: 10px 14px; border-radius: 10px; margin-bottom: 12px; font-size: 14px; }
+.mesaj.hata { background: rgba(217, 105, 79, 0.15); color: var(--kirmizi); border: 1px solid var(--kirmizi); }
+.mesaj.bilgi { background: rgba(91, 143, 214, 0.12); color: var(--mavi); border: 1px solid var(--mavi); }
+.gizli { display: none !important; }
+
+.giris-kutu { max-width: 360px; margin: 8vh auto; padding: 28px; }
+.giris-kutu .logo { text-align: center; font-size: 26px; font-weight: 700; margin-bottom: 4px; }
+.giris-kutu .logo span { color: var(--vurgu); }
+.giris-kutu .alt-baslik { text-align: center; color: var(--soluk); font-size: 13px; margin-bottom: 24px; }
+
+.istat { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.istat .kutu { background: var(--yuzey-2); border: 1px solid var(--kenar); border-radius: 12px; padding: 16px; text-align: center; }
+.istat .kutu .sayi { font-size: 22px; font-weight: 700; }
+.istat .kutu .etiket { font-size: 12px; color: var(--soluk); margin-top: 4px; }
+
+.geri { background: none; border: none; color: var(--vurgu); padding: 0; margin-bottom: 12px; font-size: 14px; }

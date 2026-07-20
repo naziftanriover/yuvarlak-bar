@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Yuvarlak Bar — Giriş</title>
+  <link rel="stylesheet" href="/stil.css" />
+</head>
+<body>
+  <div class="kapsayici">
+    <div class="bolum giris-kutu">
+      <div class="logo">Yuvarlak <span>Bar</span></div>
+      <div class="alt-baslik">Satış Otomasyonu</div>
+
+      <div id="mesaj" class="mesaj gizli"></div>
+
+      <form id="girisForm">
+        <label for="kullaniciAdi">Kullanıcı adı</label>
+        <input id="kullaniciAdi" name="kullaniciAdi" autocomplete="username" required />
+
+        <label for="sifre">Şifre</label>
+        <input id="sifre" name="sifre" type="password" autocomplete="current-password" required />
+
+        <button type="submit" class="dugme-vurgu dugme-blok">Giriş yap</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="/ortak.js"></script>
+  <script>
+    // Zaten girisliyse role gore yonlendir.
+    if (tokenAl()) {
+      yonlendir(rolAl());
+    }
+
+    function yonlendir(rol) {
+      if (rol === "PATRON") window.location.href = "/rapor.html";
+      else if (rol === "GARSON") window.location.href = "/siparis.html";
+      else window.location.href = "/satis.html"; // MUDUR
+    }
+
+    document.getElementById("girisForm").addEventListener("submit", async (olay) => {
+      olay.preventDefault();
+      mesajGizle("mesaj");
+      const kullaniciAdi = document.getElementById("kullaniciAdi").value.trim();
+      const sifre = document.getElementById("sifre").value;
+      try {
+        const sonuc = await apiCagir("POST", "/giris", { kullaniciAdi, sifre });
+        oturumKaydet(sonuc.token, sonuc.kullanici);
+        yonlendir(sonuc.kullanici.rol);
+      } catch (hata) {
+        mesajGoster("mesaj", hata.message, "hata");
+      }
+    });
+  </script>
+</body>
+</html>

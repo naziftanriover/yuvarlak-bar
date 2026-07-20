@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Yuvarlak Bar — Kullanıcılar</title>
+  <link rel="stylesheet" href="/stil.css" />
+</head>
+<body>
+  <div class="baslik">
+    <h1><span class="marka">Yuvarlak Bar</span> · Kullanıcılar</h1>
+    <div>
+      <span class="kim" id="kim"></span>
+      <button class="dugme-kucuk" onclick="cikisYap()">Çıkış</button>
+    </div>
+  </div>
+
+  <div class="kapsayici">
+    <div id="mesaj" class="mesaj gizli"></div>
+    <a href="/rapor.html" class="geri" style="display:inline-block; text-decoration:none;">← Rapora dön</a>
+
+    <div class="bolum">
+      <h2>Yeni kullanıcı ekle</h2>
+      <form id="ekleForm">
+        <label>Ad soyad</label><input id="ad" required />
+        <label>Kullanıcı adı</label><input id="kullaniciAdi" autocomplete="off" required />
+        <label>Şifre (en az 8 karakter)</label><input id="sifre" type="text" minlength="8" required />
+        <label>Rol</label>
+        <select id="rol">
+          <option value="GARSON">Garson (sadece sipariş)</option>
+          <option value="MUDUR">Müdür (satış, ödeme)</option>
+          <option value="PATRON">Patron (her şey)</option>
+        </select>
+        <button class="dugme-vurgu dugme-blok" type="submit">Kullanıcı ekle</button>
+      </form>
+    </div>
+
+    <div class="bolum">
+      <h2>Kullanıcılar</h2>
+      <div id="liste"></div>
+    </div>
+  </div>
+
+  <script src="/ortak.js"></script>
+  <script>
+    korumaKontrol();
+    document.getElementById("kim").textContent = adAl() + " (" + rolAl() + ")";
+
+    async function yukle() {
+      mesajGizle("mesaj");
+      try {
+        const kullanicilar = await apiCagir("GET", "/kullanicilar");
+        const kap = document.getElementById("liste");
+        kap.innerHTML = "";
+        for (const k of kullanicilar) {
+          const el = document.createElement("div");
+          el.className = "satir";
+          const durum = k.aktif ? "" : " <span class='alt'>(pasif)</span>";
+          el.innerHTML =
+            "<span><b>" + k.ad + "</b> <span class='alt'>@" + k.kullaniciAdi + " · " + k.rol + "</span>" + durum + "</span>";
+          const dugme = document.createElement("button");
+          dugme.className = "dugme-kucuk " + (k.aktif ? "dugme-kirmizi" : "");
+          dugme.textContent = k.aktif ? "Pasifleştir" : "Aktifleştir";
+          dugme.onclick = () => aktiflikDegistir(k.id, !k.aktif);
+          const sag = document.createElement("span");
+          sag.appendChild(dugme);
+          el.appendChild(sag);
+          kap.appendChild(el);
+        }
+      } catch (hata) {
+        mesajGoster("mesaj", hata.message, "hata");
+      }
+    }
+
+    async function aktiflikDegistir(id, aktif) {
+      try {
+        await apiCagir("POST", "/kullanicilar/durum", { id, aktif });
+        yukle();
+      } catch (hata) {
+        mesajGoster("mesaj", hata.message, "hata");
+      }
+    }
+
+    document.getElementById("ekleForm").addEventListener("submit", async (olay) => {
+      olay.preventDefault();
+      try {
+        await apiCagir("POST", "/kullanicilar", {
+          ad: document.getElementById("ad").value.trim(),
+          kullaniciAdi: document.getElementById("kullaniciAdi").value.trim(),
+          sifre: document.getElementById("sifre").value,
+          rol: document.getElementById("rol").value,
+        });
+        olay.target.reset();
+        mesajGoster("mesaj", "Kullanıcı eklendi.", "bilgi");
+        yukle();
+      } catch (hata) {
+        mesajGoster("mesaj", hata.message, "hata");
+      }
+    });
+
+    yukle();
+  </script>
+</body>
+</html>
