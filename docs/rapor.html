@@ -63,6 +63,10 @@
         <div class="kutu"><div class="sayi deger-vurgu" id="ayCiro">0,00 ₺</div><div class="etiket">Aylık gelir</div></div>
         <div class="kutu"><div class="sayi deger-yesil" id="ayKar">0,00 ₺</div><div class="etiket">Aylık kâr</div></div>
       </div>
+      <div class="istat" style="margin-top:12px;">
+        <div class="kutu"><div class="sayi" id="ayNakit">0,00 ₺</div><div class="etiket">Aylık nakit</div></div>
+        <div class="kutu"><div class="sayi" id="ayKart">0,00 ₺</div><div class="etiket">Aylık kart</div></div>
+      </div>
       <div id="gunListe" style="margin-top:12px;"></div>
     </div>
   </div>
@@ -146,11 +150,11 @@
       try {
         const hepsi = await gunKapanislariGetir();
         const gunler = hepsi.filter((g) => g.kapanis >= a.bas && g.kapanis < a.bit);
-        let ciro = 0, kar = 0;
+        let ciro = 0, kar = 0, nakit = 0, kart = 0;
         const kap = document.getElementById("gunListe");
         kap.innerHTML = gunler.length ? "" : "<div class='satir'><span class='alt'>Bu ayda kapatılmış gün yok.</span></div>";
         for (const g of gunler) {
-          ciro += g.ciroKurus || 0; kar += g.karKurus || 0;
+          ciro += g.ciroKurus || 0; kar += g.karKurus || 0; nakit += g.nakitKurus || 0; kart += g.kartKurus || 0;
           const el = document.createElement("div"); el.className = "satir";
           el.innerHTML = "<span><b>" + new Date(g.kapanis).toLocaleDateString("tr-TR") + "</b> <span class='alt'>· " + (g.siparisAdedi || 0) + " ürün</span></span><span class='alt'>Ciro: <b class='deger-vurgu'>" + kurusYaz(g.ciroKurus || 0) + "</b> · Kâr: <b class='deger-yesil'>" + kurusYaz(g.karKurus || 0) + "</b> · Nakit: " + kurusYaz(g.nakitKurus || 0) + " · Kart: " + kurusYaz(g.kartKurus || 0) + "</span>";
           kap.appendChild(el);
@@ -158,6 +162,8 @@
         document.getElementById("ayGun").textContent = gunler.length;
         document.getElementById("ayCiro").textContent = kurusYaz(ciro);
         document.getElementById("ayKar").textContent = kurusYaz(kar);
+        document.getElementById("ayNakit").textContent = kurusYaz(nakit);
+        document.getElementById("ayKart").textContent = kurusYaz(kart);
       } catch (h) { mesaj(h.message); }
     }
     (function () { const d = new Date(); document.getElementById("ay").value = d.getFullYear() + "-" + iki(d.getMonth() + 1); })();

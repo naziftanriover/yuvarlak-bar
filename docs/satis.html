@@ -87,6 +87,8 @@
           <div id="ozetSatirlar" class="adisyon-liste"></div>
           <div class="adisyon-toplam"><span>Toplam</span><span id="ciro" class="deger-vurgu"></span></div>
           <div class="adisyon-ara"><span>Ödenen</span><span id="odenen"></span></div>
+          <div class="adisyon-ara" style="padding-left:12px;"><span>• Nakit</span><span id="odNakit"></span></div>
+          <div class="adisyon-ara" style="padding-left:12px;"><span>• Kart</span><span id="odKart"></span></div>
           <div class="adisyon-ara"><span>Kalan</span><span id="kalan"></span></div>
 
           <div style="margin-top:14px; border-top:1px solid var(--kenar); padding-top:12px;">
@@ -142,6 +144,7 @@
 
     const el = (id) => document.getElementById(id);
     function mesaj(m) { const k = el("mesaj"); k.textContent = m; k.className = "mesaj hata"; }
+    function bilgi(m) { const k = el("mesaj"); k.textContent = m; k.className = "mesaj bilgi"; }
     function mesajGizle() { el("mesaj").className = "mesaj gizli"; }
 
     // Üstteki canlı "bugün ciro" çipi.
@@ -246,16 +249,23 @@
       posAdisyonCiz(el("ozetSatirlar"), ozet.satirlar, { iptalEt });
       el("ciro").textContent = kurusYaz(ozet.ciroKurus);
       el("odenen").textContent = kurusYaz(ozet.odenenKurus);
+      el("odNakit").textContent = kurusYaz(ozet.nakitKurus);
+      el("odKart").textContent = kurusYaz(ozet.kartKurus);
       el("kalan").textContent = kurusYaz(ozet.kalanKurus);
-      el("odemeTutar").value = (ozet.kalanKurus / 100).toFixed(2);
+      // Kalan negatifse (fazla ödenmişse) kutu 0 göstersin, eksiye düşmesin.
+      el("odemeTutar").value = (Math.max(0, ozet.kalanKurus) / 100).toFixed(2);
       bugunCip(); // her sipariş/iptal/ödeme sonrası bugün cirosu güncellensin
     }
 
     async function odeme(yontem) {
       const tl = parseFloat(el("odemeTutar").value);
-      if (!(tl > 0)) { mesaj("Geçerli tutar girin."); return; }
-      try { await odemeAl(profil, seciliAdisyonId, Math.round(tl * 100), yontem); await ozetYukle(); }
-      catch (h) { mesaj(h.message); }
+      if (!(tl > 0)) { mesaj("Ödeme tutarı 0'dan büyük olmalı. (Bu hesapta ödenecek tutar kalmamış olabilir.)"); return; }
+      const kurus = Math.round(tl * 100);
+      try {
+        await odemeAl(profil, seciliAdisyonId, kurus, yontem);
+        await ozetYukle();
+        bilgi(kurusYaz(kurus) + " " + (yontem === ODEME_YONTEMI.NAKIT ? "NAKİT" : "KART") + " olarak alındı.");
+      } catch (h) { mesaj(h.message); }
     }
 
     async function kapat() {

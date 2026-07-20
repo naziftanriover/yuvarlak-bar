@@ -209,8 +209,10 @@ export function ozetHesapla(hareketler, odemeler) {
     gruplar.set(anahtar, g);
   }
   const odenen = odemeler.reduce((t, o) => t + o.tutarKurus, 0);
+  const nakit = odemeler.filter((o) => o.yontem === "NAKIT").reduce((t, o) => t + o.tutarKurus, 0);
+  const kart = odemeler.filter((o) => o.yontem === "KART").reduce((t, o) => t + o.tutarKurus, 0);
   const satirlar = [...gruplar.values()].filter((g) => g.netAdet > 0).map((g) => ({ ...g, araToplamKurus: g.netAdet * g.birimFiyatKurus }));
-  return { satirlar, ciroKurus: ciro, maliyetKurus: maliyet, karKurus: ciro - maliyet, odenenKurus: odenen, kalanKurus: ciro - odenen };
+  return { satirlar, ciroKurus: ciro, maliyetKurus: maliyet, karKurus: ciro - maliyet, odenenKurus: odenen, nakitKurus: nakit, kartKurus: kart, kalanKurus: ciro - odenen };
 }
 export async function adisyonOzet(adisyonId) {
   const [h, o] = await Promise.all([hareketleriGetir(adisyonId), odemeleriGetir(adisyonId)]);
