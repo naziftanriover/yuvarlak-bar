@@ -78,7 +78,17 @@ export async function urunEkle(g) {
   await addDoc(collection(db, "urunler"), {
     ad: g.ad, kategori: g.kategori, satisFiyatiKurus: g.satisFiyatiKurus,
     maliyetKurus: g.maliyetKurus, stokAdedi: g.stokAdedi, aktif: true,
+    // stokTakip yoksa true kabul edilir (eski ürünlerle uyum). İçkiler için kapatılabilir.
+    stokTakip: g.stokTakip !== false,
+    // Porsiyonlar (tek/duble/şişe...). Boşsa ürün tek fiyatlıdır.
+    secenekler: Array.isArray(g.secenekler) ? g.secenekler : [],
   });
+}
+// Bir ürünün porsiyonlarını (tek/duble/şişe...) günceller ve denetime yazar.
+export async function urunSeceneklerGuncelle(aktor, urun, secenekler) {
+  const liste = Array.isArray(secenekler) ? secenekler : [];
+  await updateDoc(doc(db, "urunler", urun.id), { secenekler: liste });
+  await denetimEkle(aktor, "PORSIYON_DEGISIKLIGI", `${urun.ad}: porsiyonlar güncellendi (${liste.length} adet)`);
 }
 async function denetimEkle(aktor, tur, aciklama) {
   await addDoc(collection(db, "denetim"), { tur, aciklama, kullaniciId: aktor.uid, zaman: simdi() });
@@ -139,8 +149,10 @@ export function ozetHesapla(hareketler, odemeler) {
     const s = isaretli(h);
     ciro += s * h.birimFiyatKurus;
     maliyet += s * h.birimMaliyetKurus;
-    const anahtar = h.urunId + "|" + h.birimFiyatKurus;
-    const g = gruplar.get(anahtar) || { urunId: h.urunId, urunAdi: h.urunAdi, netAdet: 0, birimFiyatKurus: h.birimFiyatKurus, birimMaliyetKurus: h.birimMaliyetKurus };
+    const secenek = h.secenek || "";
+    const not = h.not || "";
+    const anahtar = h.urunId + "|" + h.birimFiyatKurus + "|" + secenek + "|" + not;
+    const g = gruplar.get(anahtar) || { urunId: h.urunId, urunAdi: h.urunAdi, secenek, not, netAdet: 0, birimFiyatKurus: h.birimFiyatKurus, birimMaliyetKurus: h.birimMaliyetKurus };
     g.netAdet += s;
     gruplar.set(anahtar, g);
   }
@@ -152,27 +164,45 @@ export async function adisyonOzet(adisyonId) {
   const [h, o] = await Promise.all([hareketleriGetir(adisyonId), odemeleriGetir(adisyonId)]);
   return ozetHesapla(h, o);
 }
-export async function siparisEkle(aktor, adisyonId, urun, adet) {
+// Porsiyonlu sipariş: secenek {ad, satisFiyatiKurus, maliyetKurus} ya da null; not isteğe bağlı.
+export async function siparisEkle(aktor, adisyonId, urun, adet, secenek, not) {
   if (!(adet >= 1)) throw new Error("Adet en az 1 olmalı.");
-  if (adet > urun.stokAdedi) throw new Error("Stok yetersiz.");
-  await addDoc(collection(db, "adisyonlar", adisyonId, "hareketler"), {
-    urunId: urun.id, urunAdi: urun.ad, adet, birimFiyatKurus: urun.satisFiyatiKurus,
-    birimMaliyetKurus: urun.maliyetKurus, tip: "EKLE", kullaniciId: aktor.uid, zaman: simdi(),
-  });
-  await updateDoc(doc(db, "urunler", urun.id), { stokAdedi: increment(-adet) });
+  const fiyat = secenek ? secenek.satisFiyatiKurus : urun.satisFiyatiKurus;
+  const maliyet = secenek ? secenek.maliyetKurus : urun.maliyetKurus;
+  const stokTakip = urun.stokTakip !== false;
+  if (stokTakip && adet > urun.stokAdedi) throw new Error("Stok yetersiz.");
+  const hareket = {
+    urunId: urun.id, urunAdi: urun.ad, adet, birimFiyatKurus: fiyat,
+    birimMaliyetKurus: maliyet, tip: "EKLE", kullaniciId: aktor.uid, zaman: simdi(),
+  };
+  if (secenek && secenek.ad) hareket.secenek = secenek.ad;
+  const notMetni = (not || "").trim();
+  if (notMetni) hareket.not = notMetni;
+  await addDoc(collection(db, "adisyonlar", adisyonId, "hareketler"), hareket);
+  if (stokTakip) await updateDoc(doc(db, "urunler", urun.id), { stokAdedi: increment(-adet) });
 }
 export async function siparisIptal(aktor, adisyonId, satir, adet, sebep) {
   if (!sebep || !sebep.trim()) throw new Error("İptal için sebep girilmeli.");
   const hareketler = await hareketleriGetir(adisyonId);
-  const net = hareketler
-    .filter((h) => h.urunId === satir.urunId && h.birimFiyatKurus === satir.birimFiyatKurus)
-    .reduce((t, h) => t + isaretli(h), 0);
+  // Aynı satır = aynı ürün + fiyat + porsiyon + not (özet gruplamasıyla birebir).
+  const ayniSatir = (h) =>
+    h.urunId === satir.urunId &&
+    h.birimFiyatKurus === satir.birimFiyatKurus &&
+    (h.secenek || "") === (satir.secenek || "") &&
+    (h.not || "") === (satir.not || "");
+  const net = hareketler.filter(ayniSatir).reduce((t, h) => t + isaretli(h), 0);
   if (adet > net) throw new Error("Var olandan fazla iptal edilemez.");
-  await addDoc(collection(db, "adisyonlar", adisyonId, "hareketler"), {
+  const hareket = {
     urunId: satir.urunId, urunAdi: satir.urunAdi, adet, birimFiyatKurus: satir.birimFiyatKurus,
     birimMaliyetKurus: satir.birimMaliyetKurus, tip: "IPTAL", sebep: sebep.trim(), kullaniciId: aktor.uid, zaman: simdi(),
-  });
-  await updateDoc(doc(db, "urunler", satir.urunId), { stokAdedi: increment(adet) });
+  };
+  if (satir.secenek) hareket.secenek = satir.secenek;
+  if (satir.not) hareket.not = satir.not;
+  await addDoc(collection(db, "adisyonlar", adisyonId, "hareketler"), hareket);
+  // Stok takibi kapalı ürünlerde iptalde de stok değişmez.
+  const urunAnlik = await getDoc(doc(db, "urunler", satir.urunId));
+  const stokTakip = urunAnlik.exists() ? urunAnlik.data().stokTakip !== false : true;
+  if (stokTakip) await updateDoc(doc(db, "urunler", satir.urunId), { stokAdedi: increment(adet) });
 }
 export async function odemeAl(aktor, adisyonId, tutarKurus, yontem) {
   if (!(tutarKurus > 0)) throw new Error("Geçerli tutar girin.");
