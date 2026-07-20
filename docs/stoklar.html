@@ -82,7 +82,7 @@
           const sag = document.createElement("span");
           sag.style.display = "flex"; sag.style.gap = "6px"; sag.style.flexWrap = "wrap"; sag.style.flexShrink = "0";
           const bMal = document.createElement("button"); bMal.className = "dugme-kucuk dugme-vurgu"; bMal.textContent = "Mal girişi";
-          const bSay = document.createElement("button"); bSay.className = "dugme-kucuk"; bSay.textContent = "Sayım";
+          const bSay = document.createElement("button"); bSay.className = "dugme-kucuk"; bSay.textContent = "Stok düzelt";
           bMal.onclick = async () => {
             const t = window.prompt(u.ad + " — kaç şişe mal girişi?", "0");
             if (t === null) return; const n = parseInt(t, 10);
@@ -90,10 +90,10 @@
             try { await malGirisi(profil, u, n); bilgi(u.ad + ": " + n + " şişe eklendi."); yukle(); } catch (h) { mesaj(h.message); }
           };
           bSay.onclick = async () => {
-            const t = window.prompt(u.ad + " — sayılan gerçek stok (mevcut: " + stokYaz(stok) + "):", String(stok));
+            const t = window.prompt(u.ad + " — doğru stok adedini gir (şişe). Girdiğin sayı yeni stok olur.\nMevcut: " + stokYaz(stok), String(stok));
             if (t === null) return; const n = parseFloat(t);
             if (!(n >= 0)) return mesaj("Geçerli sayı girin.");
-            const sebep = window.prompt("Sayım notu (isteğe bağlı):", "") || "";
+            const sebep = window.prompt("Düzeltme notu (isteğe bağlı):", "") || "";
             try { await stokSayimi(profil, u, n, sebep); bilgi(u.ad + ": stok " + stokYaz(n) + " olarak güncellendi."); yukle(); } catch (h) { mesaj(h.message); }
           };
           sag.append(bMal, bSay);
