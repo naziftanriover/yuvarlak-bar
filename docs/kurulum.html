@@ -5,72 +5,124 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Legend of the West — Otomatik Açılış Kurulumu</title>
   <style>
-    body{ font-family: system-ui, Arial, sans-serif; max-width: 820px; margin: 0 auto; padding: 24px; background:#1c130a; color:#f2e6cf; line-height:1.55; }
-    h1{ color:#e6c168; font-size:24px; }
-    h2{ color:#e6c168; font-size:18px; margin-top:28px; }
-    .kutu{ background:#0f0a05; border:1px solid #4a3a1e; border-radius:10px; padding:14px; }
-    pre{ white-space:pre-wrap; word-break:break-all; margin:0; font-family:Consolas,monospace; font-size:13px; color:#ffe9b8; }
+    body{ font-family: system-ui, Arial, sans-serif; max-width: 860px; margin: 0 auto; padding: 24px; background:#1c130a; color:#f2e6cf; line-height:1.55; }
+    h1{ color:#e6c168; font-size:23px; }
+    h2{ color:#e6c168; font-size:18px; margin-top:30px; }
+    .kutu{ background:#0f0a05; border:1px solid #4a3a1e; border-radius:10px; padding:14px; margin-top:8px; }
+    pre{ white-space:pre-wrap; word-break:break-all; margin:0; font-family:Consolas,monospace; font-size:12.5px; color:#ffe9b8; }
     button{ background:#c8952f; color:#20160a; border:0; border-radius:8px; padding:12px 20px; font-size:16px; font-weight:700; cursor:pointer; margin-top:12px; }
     button:active{ transform:translateY(1px); }
     ol{ padding-left:20px; } li{ margin:8px 0; }
     .vurgu{ color:#e6c168; font-weight:700; }
     .not{ color:#b79a6a; font-size:14px; }
     code{ background:#0f0a05; padding:2px 6px; border-radius:4px; color:#ffe9b8; }
+    .adim{ background:#241a0d; border-left:4px solid #c8952f; border-radius:6px; padding:10px 14px; margin-top:10px; }
   </style>
 </head>
 <body>
-  <h1>⭐ Legend of the West — Otomatik Açılış Kurulumu</h1>
-  <p>Bu sayfayı <span class="vurgu">barın bilgisayarında (BIISON)</span> açtın demektir. Aşağıdaki adımlarla, bilgisayar her açıldığında iki ekran kendiliğinden hazır gelecek.</p>
+  <h1>⭐ Legend of the West — Otomatik Açılış (2 ekran)</h1>
+  <p>Bu sefer kasa penceresi <span class="vurgu">otomatik olarak ana ekrana</span> taşınacak. <b>İki dosya</b> oluşturacağız; ikisi de aynı klasörde (Başlangıç) olacak.</p>
 
-  <h2>1) Aşağıdaki metni kopyala</h2>
-  <div class="kutu"><pre id="kod">@echo off
-set U=https://naziftanriover.github.io/yuvarlak-bar
-start "" chrome --kiosk-printing --no-first-run --disable-session-crashed-bubble --window-position=1366,0 --window-size=1366,768 --app=%U%/musteri.html
-timeout /t 4 >nul
-start "" chrome --new-window %U%/giris.html</pre></div>
-  <button id="kopyala">📋 Kopyala</button>
-  <span id="durum" class="not"></span>
+  <div class="adim"><b>Önce eski dosyayı sil:</b> Başlangıç klasöründe daha önce koyduğun <code>LegendWest.bat</code> varsa onu sil, yeniden yapacağız.</div>
 
-  <h2>2) Notepad'e yapıştır ve kaydet</h2>
+  <h2>DOSYA 1 — LegendWest.ps1</h2>
+  <div class="kutu"><pre id="kod1"></pre></div>
+  <button data-hedef="kod1" class="kop">📋 Dosya 1'i Kopyala</button>
   <ol>
-    <li>Başlat → <span class="vurgu">Notepad</span> aç.</li>
-    <li>Kopyaladığın metni içine <span class="vurgu">yapıştır</span> (Ctrl+V).</li>
-    <li>Menüden <span class="vurgu">File → Save As</span>.</li>
-    <li>Alttaki <span class="vurgu">"Save as type"</span> kısmını <span class="vurgu">"All Files"</span> yap (çok önemli — yoksa .txt olur).</li>
-    <li>Dosya adını <code>LegendWest.bat</code> yaz.</li>
-    <li>Kaydedilecek yer olarak <span class="vurgu">Başlangıç (Startup) klasörünü</span> seç (bir sonraki adım). Kaydet.</li>
+    <li>Notepad aç → yapıştır.</li>
+    <li><b>File → Save As</b> → "Save as type" = <span class="vurgu">All Files</span>.</li>
+    <li>Dosya adı: <code>LegendWest.ps1</code> → <span class="vurgu">Başlangıç klasörüne</span> kaydet.</li>
   </ol>
 
-  <h2>3) Başlangıç klasörünü aç (kaydederken buraya kaydet)</h2>
+  <h2>DOSYA 2 — LegendWest.bat</h2>
+  <div class="kutu"><pre id="kod2">@echo off
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0LegendWest.ps1"</pre></div>
+  <button data-hedef="kod2" class="kop">📋 Dosya 2'yi Kopyala</button>
   <ol>
-    <li>Klavyede <span class="vurgu">Windows tuşu + R</span>.</li>
-    <li>Açılan kutuya <code>shell:startup</code> yaz → Enter.</li>
-    <li>Açılan klasör Başlangıç klasörü. Notepad'de "Save As" yaparken bu klasörü seçip <code>LegendWest.bat</code> olarak kaydet.</li>
+    <li>Yeni bir Notepad aç → yapıştır.</li>
+    <li><b>File → Save As</b> → "Save as type" = <span class="vurgu">All Files</span>.</li>
+    <li>Dosya adı: <code>LegendWest.bat</code> → <span class="vurgu">aynı Başlangıç klasörüne</span> kaydet.</li>
   </ol>
 
-  <h2>4) Test et</h2>
+  <div class="adim"><b>Başlangıç klasörünü açmak:</b> Dosya Gezgini'nin adres çubuğuna <code>shell:startup</code> yazıp → oka bas. İki dosya da <b>bu klasörde</b> olmalı.</div>
+
+  <h2>Test et</h2>
   <ol>
-    <li>Başlangıç klasöründeki <code>LegendWest.bat</code> dosyasına <span class="vurgu">çift tıkla</span>.</li>
-    <li>Chrome kapanıp yeniden açılmalı: <span class="vurgu">arka ekranda müşteri ekranı</span>, <span class="vurgu">ön ekranda kasa</span>.</li>
-    <li>Çalıştıysa 🎉 bilgisayarı bir <span class="vurgu">yeniden başlat</span> — açılışta kendiliğinden gelecek.</li>
+    <li><code>LegendWest.bat</code>'a <span class="vurgu">çift tıkla</span>.</li>
+    <li>~10 saniye bekle: arka ekranda müşteri ekranı, sonra kasa penceresi açılıp <span class="vurgu">kendiliğinden ana ekrana geçecek</span>.</li>
+    <li>Olduysa 🎉 bilgisayarı yeniden başlat — açılışta otomatik gelir.</li>
   </ol>
 
-  <p class="not">Not: Kasa penceresi yanlış ekrana gelirse bir kez ana ekrana sürükle. "Windows protected your PC" çıkarsa → More info → Run anyway. Sorun olursa ekranın fotoğrafını at.</p>
+  <p class="not">Not: Bilgisayar açıkken test ederken mouse'a/klavyeye dokunma, bırak kendi yapsın (pencereyi kendisi taşıyacak). Yine olmazsa dert etme — bana yaz, en basit yönteme geçeriz (sabah tek dokunuş).</p>
 
   <script>
-    document.getElementById("kopyala").onclick = async () => {
-      const metin = document.getElementById("kod").textContent;
-      const durum = document.getElementById("durum");
-      try {
-        await navigator.clipboard.writeText(metin);
-        durum.textContent = " ✓ Kopyalandı! Şimdi Notepad'e yapıştır.";
-      } catch (e) {
-        // Yedek yöntem: metni seç
-        const r = document.createRange(); r.selectNodeContents(document.getElementById("kod"));
-        const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
-        durum.textContent = " Metin seçildi — Ctrl+C ile kopyala.";
-      }
-    };
+    const bat = "@echo off\r\npowershell -NoProfile -ExecutionPolicy Bypass -File \"%~dp0LegendWest.ps1\"\r\n";
+    const ps1 = [
+"# Legend of the West - acilis kurulumu (iki ekran)",
+"Start-Sleep -Seconds 8",
+"",
+"$U = \"https://naziftanriover.github.io/yuvarlak-bar\"",
+"",
+"$chrome = @(",
+"  \"$env:ProgramFiles\\Google\\Chrome\\Application\\chrome.exe\",",
+"  \"${env:ProgramFiles(x86)}\\Google\\Chrome\\Application\\chrome.exe\",",
+"  \"$env:LocalAppData\\Google\\Chrome\\Application\\chrome.exe\"",
+") | Where-Object { Test-Path $_ } | Select-Object -First 1",
+"if (-not $chrome) { $chrome = \"chrome.exe\" }",
+"",
+"Add-Type -AssemblyName System.Windows.Forms",
+"$sec = [System.Windows.Forms.Screen]::AllScreens | Where-Object { -not $_.Primary } | Select-Object -First 1",
+"",
+"Get-Process chrome -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue",
+"Start-Sleep -Seconds 2",
+"",
+"# 1) MUSTERI EKRANI - ilk pencere -> 2. ekran",
+"if ($sec) {",
+"  $x = $sec.Bounds.X; $y = $sec.Bounds.Y; $w = $sec.Bounds.Width; $h = $sec.Bounds.Height",
+"  Start-Process $chrome -ArgumentList \"--kiosk-printing\",\"--no-first-run\",\"--disable-session-crashed-bubble\",\"--window-position=$x,$y\",\"--window-size=$w,$h\",\"--app=$U/musteri.html\"",
+"  Start-Sleep -Seconds 5",
+"}",
+"",
+"# 2) KASA UYGULAMASI - ayni profil, yeni pencere",
+"Start-Process $chrome -ArgumentList \"--new-window\",\"$U/giris.html\"",
+"Start-Sleep -Seconds 6",
+"",
+"# 3) Kasa penceresini ana ekrana tasi: Win+Shift+Sol, sonra Win+Yukari",
+"Add-Type @\"",
+"using System;",
+"using System.Runtime.InteropServices;",
+"public class K {",
+"  [DllImport(\"user32.dll\")] public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, IntPtr dwExtraInfo);",
+"}",
+"\"@",
+"function Tus($vk, $down) { [K]::keybd_event($vk, 0, $(if ($down) { 0 } else { 2 }), [IntPtr]::Zero) }",
+"",
+"Start-Sleep -Milliseconds 500",
+"Tus 0x5B $true; Tus 0x10 $true; Tus 0x25 $true",
+"Start-Sleep -Milliseconds 150",
+"Tus 0x25 $false; Tus 0x10 $false; Tus 0x5B $false",
+"Start-Sleep -Milliseconds 500",
+"Tus 0x5B $true; Tus 0x26 $true",
+"Start-Sleep -Milliseconds 150",
+"Tus 0x26 $false; Tus 0x5B $false",
+""
+    ].join("\r\n");
+
+    document.getElementById("kod1").textContent = ps1;
+    document.getElementById("kod2").textContent = bat.trim();
+
+    document.querySelectorAll(".kop").forEach((b) => {
+      b.onclick = async () => {
+        const metin = document.getElementById(b.dataset.hedef).textContent;
+        try { await navigator.clipboard.writeText(metin); b.textContent = "✓ Kopyalandı!"; }
+        catch (e) {
+          const r = document.createRange(); r.selectNodeContents(document.getElementById(b.dataset.hedef));
+          const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+          b.textContent = "Metin seçildi — Ctrl+C";
+        }
+        setTimeout(() => { b.textContent = b.dataset.hedef === "kod1" ? "📋 Dosya 1'i Kopyala" : "📋 Dosya 2'yi Kopyala"; }, 2500);
+      };
+    });
   </script>
 </body>
 </html>
