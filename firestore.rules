@@ -98,5 +98,12 @@ service cloud.firestore {
       allow create: if rolVar(['PATRON', 'MUDUR']);
       allow update, delete: if false;
     }
+
+    // Müşteri ekranı durumu (2. monitör): ayrı pencerede (girişsiz) okunabilir.
+    // Hassas veri değil (zaten müşteriye gösterilir). Yazma yalnızca sipariş girenler.
+    match /ekran/{id} {
+      allow read: if true;
+      allow write: if rolVar(['PATRON', 'MUDUR', 'GARSON']);
+    }
   }
 }
