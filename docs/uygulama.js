@@ -421,10 +421,12 @@ export async function gunKapanislariGetir() {
 
 // --- Rapor / denetim / gece ---
 export async function gecelikOzet(bas, bit) {
-  const s = query(collection(db, "adisyonlar"), where("durum", "==", "KAPALI"), where("kapanisZamani", ">=", bas), where("kapanisZamani", "<=", bit));
+  // Yalnızca kapanisZamani aralığı (tekil index yeter). "KAPALI" filtresini kodda uygula ki bileşik index gerekmesin.
+  const s = query(collection(db, "adisyonlar"), where("kapanisZamani", ">=", bas), where("kapanisZamani", "<=", bit));
   const anlik = await getDocs(s);
   let adisyonSayisi = 0, ciro = 0, maliyet = 0, iskonto = 0, nakit = 0, kart = 0;
   for (const d of anlik.docs) {
+    if (d.data().durum !== "KAPALI") continue;
     adisyonSayisi++;
     const isk = d.data().iskontoKurus || 0;
     const [h, o] = await Promise.all([hareketleriGetir(d.id), odemeleriGetir(d.id)]);
@@ -438,9 +440,14 @@ export async function gecelikOzet(bas, bit) {
   return { adisyonSayisi, ciroKurus: ciro, iskontoKurus: iskonto, maliyetKurus: maliyet, karKurus: ciro - maliyet, nakitKurus: nakit, kartKurus: kart };
 }
 export async function iptalDenetimi(bas, bit) {
-  const s = query(collectionGroup(db, "hareketler"), where("tip", "==", "IPTAL"), where("zaman", ">=", bas), where("zaman", "<=", bit));
-  const anlik = await getDocs(s);
-  return anlik.docs.map((d) => d.data());
+  try {
+    // Yalnızca zaman aralığı; "IPTAL" filtresini kodda uygula (bileşik index gerekmesin).
+    const s = query(collectionGroup(db, "hareketler"), where("zaman", ">=", bas), where("zaman", "<=", bit));
+    const anlik = await getDocs(s);
+    return anlik.docs.map((d) => d.data()).filter((h) => h.tip === "IPTAL");
+  } catch (h) {
+    return []; // koleksiyon-grubu index'i yoksa rapor bozulmasın
+  }
 }
 export async function denetimKayitlari(bas, bit) {
   const s = query(collection(db, "denetim"), where("zaman", ">=", bas), where("zaman", "<=", bit), orderBy("zaman", "desc"));
