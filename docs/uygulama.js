@@ -227,7 +227,8 @@ export function ozetHesapla(hareketler, odemeler) {
   const nakit = odemeler.filter((o) => o.yontem === "NAKIT").reduce((t, o) => t + o.tutarKurus, 0);
   const kart = odemeler.filter((o) => o.yontem === "KART").reduce((t, o) => t + o.tutarKurus, 0);
   const satirlar = [...gruplar.values()].filter((g) => g.netAdet > 0).map((g) => ({ ...g, araToplamKurus: g.netAdet * g.birimFiyatKurus }));
-  return { satirlar, ciroKurus: ciro, maliyetKurus: maliyet, karKurus: ciro - maliyet, odenenKurus: odenen, nakitKurus: nakit, kartKurus: kart, kalanKurus: ciro - odenen };
+  const odemeGecmisi = [...odemeler].sort((a, b) => (a.zaman || "").localeCompare(b.zaman || ""));
+  return { satirlar, ciroKurus: ciro, maliyetKurus: maliyet, karKurus: ciro - maliyet, odenenKurus: odenen, nakitKurus: nakit, kartKurus: kart, kalanKurus: ciro - odenen, odemeler: odemeGecmisi };
 }
 export async function adisyonOzet(adisyonId) {
   const [h, o] = await Promise.all([hareketleriGetir(adisyonId), odemeleriGetir(adisyonId)]);
@@ -294,9 +295,12 @@ export async function siparisIptal(aktor, adisyonId, satir, adet, sebep) {
     siparisAdedi: increment(-adet), iptalAdedi: increment(adet),
   });
 }
-export async function odemeAl(aktor, adisyonId, tutarKurus, yontem) {
+export async function odemeAl(aktor, adisyonId, tutarKurus, yontem, not) {
   if (!(tutarKurus > 0)) throw new Error("Geçerli tutar girin.");
-  await addDoc(collection(db, "adisyonlar", adisyonId, "odemeler"), { tutarKurus, yontem, kullaniciId: aktor.uid, zaman: simdi() });
+  const kayit = { tutarKurus, yontem, kullaniciId: aktor.uid, zaman: simdi() };
+  const notMetni = (not || "").trim();
+  if (notMetni) kayit.not = notMetni;
+  await addDoc(collection(db, "adisyonlar", adisyonId, "odemeler"), kayit);
   // Günün nakit/kart toplamı (kasa mutabakatı için).
   await gunArtir(yontem === ODEME_YONTEMI.NAKIT ? { nakitKurus: increment(tutarKurus) } : { kartKurus: increment(tutarKurus) });
 }

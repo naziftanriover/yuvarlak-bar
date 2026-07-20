@@ -34,16 +34,27 @@
           <div class="adisyon-ara"><span>Ödenen</span><span id="odenen"></span></div>
           <div class="adisyon-ara" style="padding-left:12px;"><span>• Nakit</span><span id="odNakit"></span></div>
           <div class="adisyon-ara" style="padding-left:12px;"><span>• Kart</span><span id="odKart"></span></div>
-          <div class="adisyon-ara"><span>Kalan</span><span id="kalan"></span></div>
+          <div class="adisyon-ara"><span>Kalan</span><span id="kalan" class="deger-vurgu"></span></div>
+
+          <div id="odemeListe" style="margin-top:8px;"></div>
 
           <div style="margin-top:14px; border-top:1px solid var(--kenar); padding-top:12px;">
-            <label>Ödeme tutarı (TL)</label>
-            <input id="odemeTutar" type="number" step="0.01" min="0" />
+            <label>Ödeme al</label>
             <div style="display:flex; gap:10px;">
-              <button class="dugme-yesil" style="flex:1" id="btnNakit">Nakit</button>
-              <button class="dugme-yesil" style="flex:1" id="btnKart">Kart</button>
+              <button class="dugme-yesil" style="flex:1" id="btnNakitSec">Nakit al</button>
+              <button class="dugme-yesil" style="flex:1" id="btnKartSec">Kart al</button>
             </div>
-            <button class="dugme-vurgu dugme-blok" style="margin-top:10px" id="btnKapat">Hesabı kapat</button>
+            <div id="odemeGir" class="gizli" style="margin-top:10px;">
+              <label id="odemeGirBaslik">Nakit tutarı (TL)</label>
+              <input id="odemeTutar" type="number" step="0.01" min="0" />
+              <label>Açıklama (isteğe bağlı)</label>
+              <input id="odemeNot" placeholder="örn: Ahmet'in payı" />
+              <div style="display:flex; gap:10px;">
+                <button class="dugme" style="flex:1" id="btnOdemeVaz">Vazgeç</button>
+                <button class="dugme-vurgu" style="flex:1" id="btnOdemeOnay">Onayla</button>
+              </div>
+            </div>
+            <button class="dugme-vurgu dugme-blok" style="margin-top:12px" id="btnKapat">Hesabı kapat</button>
           </div>
 
           <div style="margin-top:12px; border-top:1px solid var(--kenar); padding-top:12px;">
@@ -81,6 +92,8 @@
     let kategoriAdlari = [];
     let seciliAdisyonId = null;
     let seciliMasa = null;
+    let mevcutKalan = 0;
+    let seciliYontem = null;
 
     const el = (id) => document.getElementById(id);
     function mesaj(m) { const k = el("mesaj"); k.textContent = m; k.className = "mesaj hata"; }
@@ -149,18 +162,43 @@
       el("odNakit").textContent = kurusYaz(ozet.nakitKurus);
       el("odKart").textContent = kurusYaz(ozet.kartKurus);
       el("kalan").textContent = kurusYaz(ozet.kalanKurus);
-      el("odemeTutar").value = (Math.max(0, ozet.kalanKurus) / 100).toFixed(2);
+      mevcutKalan = ozet.kalanKurus;
+      odemeListeCiz(ozet.odemeler);
       bugunCip();
     }
 
-    async function odeme(yontem) {
+    // Yapılan ödemelerin (kısmi olabilir) listesi — kim ne kadar ödedi.
+    function odemeListeCiz(odemeler) {
+      const kap = el("odemeListe");
+      kap.innerHTML = "";
+      if (!odemeler || !odemeler.length) return;
+      for (const o of odemeler) {
+        const d = document.createElement("div"); d.className = "adisyon-ara";
+        const et = "✓ " + (o.yontem === "NAKIT" ? "Nakit" : "Kart") + (o.not ? " · " + o.not : "");
+        d.innerHTML = "<span class='alt' style='color:var(--soluk)'>" + et + "</span><span>" + kurusYaz(o.tutarKurus) + "</span>";
+        kap.appendChild(d);
+      }
+    }
+
+    // Önce yöntem seç → tutar + açıklama alanı açılır.
+    function odemeGirAc(yontem) {
+      seciliYontem = yontem;
+      el("odemeGirBaslik").textContent = (yontem === ODEME_YONTEMI.NAKIT ? "Nakit" : "Kart") + " tutarı (TL)";
+      el("odemeTutar").value = (Math.max(0, mevcutKalan) / 100).toFixed(2);
+      el("odemeNot").value = "";
+      el("odemeGir").classList.remove("gizli");
+      el("odemeTutar").focus();
+      el("odemeTutar").select();
+    }
+    async function odemeOnay() {
       const tl = parseFloat(el("odemeTutar").value);
-      if (!(tl > 0)) { mesaj("Ödeme tutarı 0'dan büyük olmalı. (Bu hesapta ödenecek tutar kalmamış olabilir.)"); return; }
+      if (!(tl > 0)) { mesaj("Tutar 0'dan büyük olmalı."); return; }
       const kurus = Math.round(tl * 100);
       try {
-        await odemeAl(profil, seciliAdisyonId, kurus, yontem);
+        await odemeAl(profil, seciliAdisyonId, kurus, seciliYontem, el("odemeNot").value);
+        el("odemeGir").classList.add("gizli");
         await ozetYukle();
-        bilgi(kurusYaz(kurus) + " " + (yontem === ODEME_YONTEMI.NAKIT ? "NAKİT" : "KART") + " olarak alındı.");
+        bilgi(kurusYaz(kurus) + " " + (seciliYontem === ODEME_YONTEMI.NAKIT ? "NAKİT" : "KART") + " alındı.");
       } catch (h) { mesaj(h.message); }
     }
 
@@ -208,8 +246,10 @@
 
     el("btnGeri").onclick = geri;
     el("btnTasi").onclick = tasi;
-    el("btnNakit").onclick = () => odeme(ODEME_YONTEMI.NAKIT);
-    el("btnKart").onclick = () => odeme(ODEME_YONTEMI.KART);
+    el("btnNakitSec").onclick = () => odemeGirAc(ODEME_YONTEMI.NAKIT);
+    el("btnKartSec").onclick = () => odemeGirAc(ODEME_YONTEMI.KART);
+    el("btnOdemeVaz").onclick = () => el("odemeGir").classList.add("gizli");
+    el("btnOdemeOnay").onclick = odemeOnay;
     el("btnKapat").onclick = kapat;
 
     yukle();
