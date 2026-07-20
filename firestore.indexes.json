@@ -1,0 +1,28 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "adisyonlar",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "durum", "order": "ASCENDING" },
+        { "fieldPath": "kapanisZamani", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "hareketler",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "tip", "order": "ASCENDING" },
+        { "fieldPath": "zaman", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "denetim",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "zaman", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
