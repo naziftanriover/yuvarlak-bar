@@ -43,7 +43,7 @@
   <script type="module">
     import {
       korumaVeProfil, cikisYap, sifreDegistirAkisi, kurusYaz,
-      urunleriGetir, kategorileriGetir, masalariGetir, masayaAdisyonAc, adisyonOzet, siparisIptal,
+      urunleriGetir, kategorileriGetir, masalariGetir, masayaAdisyonAc, adisyonOzet, siparisIptal, masaBosalt,
     } from "./uygulama.js";
     import { posUrunPaneli, posAdisyonCiz } from "./pos.js";
     import { kabukKur } from "./kabuk.js";
@@ -54,6 +54,7 @@
     let urunler = [];
     let kategoriAdlari = [];
     let seciliAdisyonId = null;
+    let seciliMasa = null;
 
     const el = (id) => document.getElementById(id);
     function mesaj(m) { const k = el("mesaj"); k.textContent = m; k.className = "mesaj hata"; }
@@ -88,6 +89,7 @@
         let adisyonId = masa.acikAdisyonId;
         if (masa.durum !== "DOLU") adisyonId = await masayaAdisyonAc(profil, masa);
         seciliAdisyonId = adisyonId;
+        seciliMasa = masa;
         el("detayBaslik").textContent = masa.ad;
         gorunum(true);
         posUrunPaneli({
@@ -117,7 +119,16 @@
       el("detayGorunum").classList.toggle("gizli", !detay);
       el("masaGorunum").classList.toggle("gizli", detay);
     }
-    el("btnGeri").onclick = () => { seciliAdisyonId = null; gorunum(false); yukle(); };
+    // ← Masalar: sipariş girilmemiş masayı otomatik boşalt.
+    el("btnGeri").onclick = async () => {
+      if (seciliAdisyonId && seciliMasa) {
+        try {
+          const ozet = await adisyonOzet(seciliAdisyonId);
+          if (ozet.satirlar.length === 0 && ozet.odenenKurus === 0) await masaBosalt(seciliAdisyonId, seciliMasa.id);
+        } catch (h) { /* yoksay */ }
+      }
+      seciliAdisyonId = null; seciliMasa = null; gorunum(false); yukle();
+    };
 
     yukle();
   </script>

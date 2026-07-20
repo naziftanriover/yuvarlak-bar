@@ -100,10 +100,10 @@
           </div>
 
           <div style="margin-top:12px; border-top:1px solid var(--kenar); padding-top:12px;">
-            <label>Masayı taşı</label>
+            <label>Masayı taşı / birleştir</label>
             <div style="display:flex; gap:10px;">
               <select id="hedefMasa" style="flex:1; margin:0;"></select>
-              <button id="btnTasi">Taşı</button>
+              <button id="btnTasi">Uygula</button>
             </div>
           </div>
         </aside>
@@ -122,7 +122,7 @@
       korumaVeProfil, cikisYap, sifreDegistirAkisi, kurusYaz,
       urunleriGetir, urunEkle, urunSeceneklerGuncelle, fiyatGuncelle, malGirisi, stokSayimi, urunDurum,
       kategorileriGetir, kategoriEkle, kategoriAdDegistir, kategoriDurum, kategoriSirala, kategorileriIceAktar,
-      masalariGetir, masaEkle, masaAdDegistir, masayaAdisyonAc, masaTasi,
+      masalariGetir, masaEkle, masaAdDegistir, masayaAdisyonAc, masaBirlestir, masaBosalt,
       adisyonOzet, siparisIptal, odemeAl, hesapKapat, ODEME_YONTEMI, bugunGetir,
     } from "./uygulama.js";
     import { posUrunPaneli, posAdisyonCiz, seceneklerDuzenlePenceresi } from "./pos.js";
@@ -260,24 +260,27 @@
 
     async function kapat() {
       if (!window.confirm("Hesap kapatılsın mı?")) return;
-      try { await hesapKapat(seciliAdisyonId, seciliMasa.id); geri(); }
+      try { await hesapKapat(seciliAdisyonId, seciliMasa.id); temizGorunum(); }
       catch (h) { mesaj(h.message); }
     }
 
     function hedefMasaDoldur(mevcutId) {
       const sec = el("hedefMasa");
-      const boslar = tumMasalar.filter((m) => m.durum === "BOS" && m.id !== mevcutId);
-      sec.innerHTML = boslar.length ? "" : "<option value=''>Boş masa yok</option>";
-      for (const m of boslar) {
+      const digerleri = tumMasalar.filter((m) => m.id !== mevcutId);
+      sec.innerHTML = digerleri.length ? "" : "<option value=''>Başka masa yok</option>";
+      for (const m of digerleri) {
         const o = document.createElement("option");
-        o.value = m.id; o.textContent = m.ad; sec.appendChild(o);
+        o.value = m.id;
+        o.textContent = m.ad + (m.durum === "DOLU" ? " (dolu — birleştir)" : " (boş)");
+        sec.appendChild(o);
       }
     }
     async function tasi() {
       const id = el("hedefMasa").value;
       const hedef = tumMasalar.find((m) => m.id === id);
-      if (!hedef) { mesaj("Boş masa seçin."); return; }
-      try { await masaTasi(seciliAdisyonId, seciliMasa.id, hedef); geri(); }
+      if (!hedef) { mesaj("Masa seçin."); return; }
+      if (hedef.durum === "DOLU" && !window.confirm(hedef.ad + " dolu. İki masanın hesabı birleştirilsin mi?")) return;
+      try { await masaBirlestir(seciliAdisyonId, seciliMasa.id, hedef); temizGorunum(); }
       catch (h) { mesaj(h.message); }
     }
 
@@ -339,7 +342,17 @@
       el("detayGorunum").classList.toggle("gizli", !detay);
       el("masaGorunum").classList.toggle("gizli", detay);
     }
-    function geri() { seciliAdisyonId = null; gorunum(false); yukle(); }
+    function temizGorunum() { seciliAdisyonId = null; seciliMasa = null; gorunum(false); yukle(); }
+    // ← Masalar: sipariş girilmemiş masayı otomatik boşalt (DOLU-boş kalmasın).
+    async function geri() {
+      if (seciliAdisyonId && seciliMasa) {
+        try {
+          const ozet = await adisyonOzet(seciliAdisyonId);
+          if (ozet.satirlar.length === 0 && ozet.odenenKurus === 0) await masaBosalt(seciliAdisyonId, seciliMasa.id);
+        } catch (h) { /* boşaltma hatası akışı durdurmasın */ }
+      }
+      temizGorunum();
+    }
 
     el("btnGeri").onclick = geri;
     el("btnTasi").onclick = tasi;

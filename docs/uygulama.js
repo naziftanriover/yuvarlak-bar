@@ -283,6 +283,29 @@ export async function masaTasi(adisyonId, eskiMasaId, hedefMasa) {
   await updateDoc(doc(db, "masalar", eskiMasaId), { durum: "BOS", acikAdisyonId: null });
   await updateDoc(doc(db, "masalar", hedefMasa.id), { durum: "DOLU", acikAdisyonId: adisyonId });
 }
+// Sipariş girilmemiş (boş) masayı boşaltır — "dolu ama boş" kalmasını önler.
+export async function masaBosalt(adisyonId, masaId) {
+  await updateDoc(doc(db, "adisyonlar", adisyonId), { durum: "BOSALTILDI", kapanisZamani: simdi() });
+  await updateDoc(doc(db, "masalar", masaId), { durum: "BOS", acikAdisyonId: null });
+}
+// Masayı taşı ya da birleştir: hedef boşsa taşır, doluysa iki adisyonu birleştirir.
+export async function masaBirlestir(kaynakAdisyonId, kaynakMasaId, hedefMasa) {
+  if (hedefMasa.id === kaynakMasaId) throw new Error("Aynı masa.");
+  if (hedefMasa.durum !== "DOLU" || !hedefMasa.acikAdisyonId) {
+    return masaTasi(kaynakAdisyonId, kaynakMasaId, hedefMasa); // hedef boş → taşı
+  }
+  const hedefId = hedefMasa.acikAdisyonId;
+  // Kaynağın hareket + ödemelerini hedefe kopyala (append-only; stok/bugün toplamı zaten sayıldı).
+  const [hareketler, odemeler] = await Promise.all([
+    getDocs(collection(db, "adisyonlar", kaynakAdisyonId, "hareketler")),
+    getDocs(collection(db, "adisyonlar", kaynakAdisyonId, "odemeler")),
+  ]);
+  for (const h of hareketler.docs) await addDoc(collection(db, "adisyonlar", hedefId, "hareketler"), h.data());
+  for (const o of odemeler.docs) await addDoc(collection(db, "adisyonlar", hedefId, "odemeler"), o.data());
+  // Kaynağı "birleştirildi" işaretle (rapora KAPALI gibi girmesin) ve masasını boşalt.
+  await updateDoc(doc(db, "adisyonlar", kaynakAdisyonId), { durum: "BIRLESTIRILDI", kapanisZamani: simdi() });
+  await updateDoc(doc(db, "masalar", kaynakMasaId), { durum: "BOS", acikAdisyonId: null });
+}
 
 // --- İş günü (bugün) ---
 // Tek canlı gün: gunler/aktif. Saat bağımsız — "Günü kapat" ile arşivlenip sıfırlanana kadar
