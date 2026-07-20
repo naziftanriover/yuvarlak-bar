@@ -77,6 +77,14 @@ export function stokEkle(urun: Urun, adet: number): Urun {
   return { ...urun, stokAdedi: urun.stokAdedi + adet };
 }
 
+// Stogu belirli bir sayiya ayarlar (fiziksel sayim sonucu). Yeni urun nesnesi dondurur.
+export function stokAyarla(urun: Urun, yeniStok: number): Urun {
+  if (!negatifOlmayanTamSayiMi(yeniStok)) {
+    throw new AdisyonHatasi(HATA_KODU.GECERSIZ_STOK, "Sayilan stok gecersiz.");
+  }
+  return { ...urun, stokAdedi: yeniStok };
+}
+
 // Stok duser (satis). Yetersiz stokta anlamli hata verir.
 export function stokDus(urun: Urun, adet: number): Urun {
   if (!pozitifTamSayiMi(adet)) {

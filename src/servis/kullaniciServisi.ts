@@ -1,7 +1,17 @@
 // Kullanici yonetimi servisi: patron mudur/garson hesabi ekler, listeler,
 // pasiflestirir. Hepsi KULLANICI_YONET yetkisi ister (yani sadece patron).
 
-import { kullaniciOlustur, kullaniciyiGizle, yetkiDogrula, IZIN, AdisyonHatasi, HATA_KODU } from "../cekirdek/index";
+import {
+  kullaniciOlustur,
+  kullaniciyiGizle,
+  sifreDogrula,
+  sifreHashle,
+  sifreGucunuDogrula,
+  yetkiDogrula,
+  IZIN,
+  AdisyonHatasi,
+  HATA_KODU,
+} from "../cekirdek/index";
 import type { GuvenliKullanici, Rol } from "../cekirdek/index";
 import type { KullaniciDeposu } from "../veri/index";
 import type { Aktor, Saglayicilar } from "./saglayicilar";
@@ -18,6 +28,7 @@ export interface KullaniciServisi {
   ekle(aktor: Aktor, girdi: YeniKullaniciGirdi): Promise<GuvenliKullanici>;
   listele(aktor: Aktor): GuvenliKullanici[];
   aktiflikDegistir(aktor: Aktor, id: string, aktif: boolean): GuvenliKullanici;
+  sifremiDegistir(aktor: Aktor, eskiSifre: string, yeniSifre: string): Promise<void>;
 }
 
 export function kullaniciServisiOlustur(
@@ -64,6 +75,20 @@ export function kullaniciServisiOlustur(
       const yeni = { ...mevcut, aktif };
       kullaniciDepo.guncelle(yeni);
       return kullaniciyiGizle(yeni);
+    },
+
+    async sifremiDegistir(aktor, eskiSifre, yeniSifre) {
+      const kullanici = kullaniciDepo.idIleGetir(aktor.kullaniciId);
+      if (!kullanici) {
+        throw new AdisyonHatasi(HATA_KODU.BULUNAMADI, "Kullanici bulunamadi.");
+      }
+      const eskiDogru = await sifreDogrula(eskiSifre, kullanici.sifreHash);
+      if (!eskiDogru) {
+        throw new AdisyonHatasi(HATA_KODU.GIRIS_BASARISIZ, "Eski sifre hatali.");
+      }
+      sifreGucunuDogrula(yeniSifre); // yeni sifre yeterince guclu mu
+      const yeniHash = await sifreHashle(yeniSifre);
+      kullaniciDepo.guncelle({ ...kullanici, sifreHash: yeniHash });
     },
   };
 }

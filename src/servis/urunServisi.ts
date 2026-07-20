@@ -4,6 +4,10 @@
 import {
   urunOlustur,
   satisFiyatiGuncelle,
+  stokEkle,
+  stokAyarla,
+  urunuPasiflestir,
+  urunuAktiflestir,
   aktifUrunler,
   kurusuBicimlendir,
   yetkiDogrula,
@@ -21,6 +25,9 @@ export interface UrunServisi {
   aktifleriListele(): Urun[];
   ekle(aktor: Aktor, girdi: UrunGirdi): Urun;
   fiyatGuncelle(aktor: Aktor, urunId: string, yeniFiyatKurus: number): Urun;
+  malGirisi(aktor: Aktor, urunId: string, adet: number): Urun;
+  stokSayimi(aktor: Aktor, urunId: string, sayilanAdet: number, sebep: string): Urun;
+  durumDegistir(aktor: Aktor, urunId: string, aktif: boolean): Urun;
 }
 
 export function urunServisiOlustur(
@@ -62,5 +69,55 @@ export function urunServisiOlustur(
 
       return yeni;
     },
+
+    malGirisi(aktor, urunId, adet) {
+      yetkiDogrula(aktor.rol, IZIN.URUN_YONET);
+      const mevcut = urunGetir(urunId);
+      const yeni = stokEkle(mevcut, adet);
+      urunDepo.guncelle(yeni);
+      denetimDepo.ekle({
+        id: saglayici.yeniKimlik(),
+        tur: DENETIM_TURU.STOK_GIRISI,
+        aciklama: `${mevcut.ad}: +${adet} mal girişi (yeni stok: ${yeni.stokAdedi})`,
+        kullaniciId: aktor.kullaniciId,
+        zaman: saglayici.simdiIso(),
+      });
+      return yeni;
+    },
+
+    stokSayimi(aktor, urunId, sayilanAdet, sebep) {
+      yetkiDogrula(aktor.rol, IZIN.URUN_YONET);
+      const mevcut = urunGetir(urunId);
+      const fark = sayilanAdet - mevcut.stokAdedi;
+      const yeni = stokAyarla(mevcut, sayilanAdet);
+      urunDepo.guncelle(yeni);
+      const farkMetni = fark >= 0 ? `+${fark}` : `${fark}`;
+      const sebepMetni = sebep && sebep.trim() ? ` - ${sebep.trim()}` : "";
+      denetimDepo.ekle({
+        id: saglayici.yeniKimlik(),
+        tur: DENETIM_TURU.STOK_SAYIMI,
+        aciklama: `${mevcut.ad}: sayım ${mevcut.stokAdedi} -> ${sayilanAdet} (fark ${farkMetni})${sebepMetni}`,
+        kullaniciId: aktor.kullaniciId,
+        zaman: saglayici.simdiIso(),
+      });
+      return yeni;
+    },
+
+    durumDegistir(aktor, urunId, aktif) {
+      yetkiDogrula(aktor.rol, IZIN.URUN_YONET);
+      const mevcut = urunGetir(urunId);
+      const yeni = aktif ? urunuAktiflestir(mevcut) : urunuPasiflestir(mevcut);
+      urunDepo.guncelle(yeni);
+      return yeni;
+    },
   };
+
+  // Urunu getirir, yoksa anlamli hata verir.
+  function urunGetir(urunId: string): Urun {
+    const urun = urunDepo.idIleGetir(urunId);
+    if (!urun) {
+      throw new AdisyonHatasi(HATA_KODU.BULUNAMADI, "Urun bulunamadi.");
+    }
+    return urun;
+  }
 }

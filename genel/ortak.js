@@ -76,6 +76,20 @@ function kurusYaz(kurus) {
   }) + " ₺";
 }
 
+// Şifre değiştirme akışı (her panelde kullanılır).
+async function sifreDegistirAkisi() {
+  const eski = window.prompt("Mevcut şifreniz:");
+  if (!eski) return;
+  const yeni = window.prompt("Yeni şifre (en az 8 karakter):");
+  if (!yeni) return;
+  try {
+    await apiCagir("POST", "/sifre-degistir", { eskiSifre: eski, yeniSifre: yeni });
+    window.alert("Şifreniz değiştirildi.");
+  } catch (hata) {
+    window.alert("Hata: " + hata.message);
+  }
+}
+
 // Basit mesaj gosterimi (hata veya bilgi).
 function mesajGoster(kutuId, metin, tur) {
   const kutu = document.getElementById(kutuId);

@@ -10,6 +10,8 @@ import {
   siparisHareketiDogrula,
   iptalHareketiOlustur,
   adisyonOzeti,
+  stokDus,
+  stokEkle,
   yetkiDogrula,
   IZIN,
   HAREKET_TIPI,
@@ -95,7 +97,11 @@ export function adisyonServisiOlustur(
         zaman: saglayici.simdiIso(),
       };
       siparisHareketiDogrula(hareket);
+
+      // Stok otomatik duser; yetersizse siparis kaydedilmez (once dusur, sonra kaydet).
+      const dususSonrasi = stokDus(urun, adet);
       adisyonDepo.hareketEkle(adisyonId, hareket);
+      urunDepo.guncelle(dususSonrasi);
       return hareket;
     },
 
@@ -121,6 +127,9 @@ export function adisyonServisiOlustur(
         zaman: saglayici.simdiIso(),
       });
       adisyonDepo.hareketEkle(adisyonId, iptal);
+
+      // Iptal edilen adet stoga geri doner.
+      urunDepo.guncelle(stokEkle(urun, adet));
       return iptal;
     },
 

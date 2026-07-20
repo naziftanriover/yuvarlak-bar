@@ -3,6 +3,8 @@
 
 export const DENETIM_TURU = {
   FIYAT_DEGISIKLIGI: "FIYAT_DEGISIKLIGI",
+  STOK_GIRISI: "STOK_GIRISI", // mal girisi (stok artirma)
+  STOK_SAYIMI: "STOK_SAYIMI", // fiziksel sayim sonucu duzeltme (fark gorunur)
 } as const;
 
 export type DenetimTuru = (typeof DENETIM_TURU)[keyof typeof DENETIM_TURU];

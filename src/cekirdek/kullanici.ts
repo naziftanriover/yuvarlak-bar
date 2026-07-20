@@ -125,7 +125,7 @@ export async function sifreDogrula(sifre: string, saklananHash: string): Promise
 }
 
 // Sifrenin en az kurala uyup uymadigini kontrol eder (dogrudan hata firlatir).
-function sifreGucunuDogrula(sifre: string): void {
+export function sifreGucunuDogrula(sifre: string): void {
   if (typeof sifre !== "string" || sifre.length < EN_AZ_SIFRE_UZUNLUGU) {
     throw new AdisyonHatasi(
       HATA_KODU.ZAYIF_SIFRE,

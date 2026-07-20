@@ -147,9 +147,32 @@ async function yonlendir(req: IncomingMessage, bag: Bagimliliklar): Promise<unkn
   switch (anahtar) {
     case "GET /urunler":
       return bag.urun.aktifleriListele();
+    case "GET /urunler/hepsi":
+      return bag.urun.listele();
     case "POST /urunler": {
       const g = await govdeJson(req);
       return bag.urun.ekle(aktor, g as never);
+    }
+    case "POST /urunler/fiyat": {
+      const g = await govdeJson(req);
+      return bag.urun.fiyatGuncelle(aktor, String(g.urunId ?? ""), Number(g.yeniFiyatKurus));
+    }
+    case "POST /urunler/stok-giris": {
+      const g = await govdeJson(req);
+      return bag.urun.malGirisi(aktor, String(g.urunId ?? ""), Number(g.adet));
+    }
+    case "POST /urunler/stok-sayim": {
+      const g = await govdeJson(req);
+      return bag.urun.stokSayimi(aktor, String(g.urunId ?? ""), Number(g.sayilanAdet), String(g.sebep ?? ""));
+    }
+    case "POST /urunler/durum": {
+      const g = await govdeJson(req);
+      return bag.urun.durumDegistir(aktor, String(g.urunId ?? ""), Boolean(g.aktif));
+    }
+    case "POST /sifre-degistir": {
+      const g = await govdeJson(req);
+      await bag.kullanici.sifremiDegistir(aktor, String(g.eskiSifre ?? ""), String(g.yeniSifre ?? ""));
+      return { durum: "tamam" };
     }
     case "GET /masalar":
       return bag.masa.listele();
@@ -247,7 +270,14 @@ function cevapYaz(res: ServerResponse, durum: number, veri: unknown): void {
 const GENEL_DIZIN = fileURLToPath(new URL("../../genel", import.meta.url));
 
 // GET olan API yollari; bunlarin disindaki GET istekleri statik dosya sayilir.
-const API_GET_YOLLARI = new Set(["/saglik", "/urunler", "/masalar", "/gece/gecmis", "/kullanicilar"]);
+const API_GET_YOLLARI = new Set([
+  "/saglik",
+  "/urunler",
+  "/urunler/hepsi",
+  "/masalar",
+  "/gece/gecmis",
+  "/kullanicilar",
+]);
 
 const ICERIK_TIPLERI: Record<string, string> = {
   ".html": "text/html; charset=utf-8",

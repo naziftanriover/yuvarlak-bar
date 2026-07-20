@@ -11,6 +11,7 @@
     <h1><span class="marka">Yuvarlak Bar</span> · Satış</h1>
     <div>
       <span class="kim" id="kim"></span>
+      <button class="dugme-kucuk" onclick="sifreDegistirAkisi()">Şifre</button>
       <button class="dugme-kucuk" onclick="cikisYap()">Çıkış</button>
     </div>
   </div>
@@ -41,6 +42,11 @@
             <button class="dugme-blok" type="submit">Masa ekle</button>
           </form>
         </div>
+      </div>
+
+      <div class="bolum">
+        <h2>Ürün yönetimi</h2>
+        <div id="urunYonet"></div>
       </div>
     </div>
 
@@ -89,6 +95,67 @@
         ]);
         urunler = aktifUrunler;
         masalariCiz(masalar);
+        urunYonetYukle();
+      } catch (hata) {
+        mesajGoster("mesaj", hata.message, "hata");
+      }
+    }
+
+    async function urunYonetYukle() {
+      try {
+        const hepsi = await apiCagir("GET", "/urunler/hepsi");
+        const kap = document.getElementById("urunYonet");
+        kap.innerHTML = hepsi.length === 0 ? "<div class='satir'><span class='alt'>Henüz ürün yok.</span></div>" : "";
+        for (const u of hepsi) {
+          const el = document.createElement("div");
+          el.className = "satir";
+          const pasif = u.aktif ? "" : " <span class='alt'>(pasif)</span>";
+          el.innerHTML = "<span><b>" + u.ad + "</b> <span class='alt'>· " + kurusYaz(u.satisFiyatiKurus) +
+            " · stok: " + u.stokAdedi + "</span>" + pasif + "</span>";
+          const sag = document.createElement("span");
+          sag.style.display = "flex"; sag.style.gap = "6px"; sag.style.flexWrap = "wrap";
+          const btn = (metin, sinif) => { const b = document.createElement("button"); b.className = "dugme-kucuk " + (sinif || ""); b.textContent = metin; return b; };
+          const bFiyat = btn("Fiyat"), bMal = btn("Mal girişi"), bSayim = btn("Sayım");
+          const bDurum = btn(u.aktif ? "Pasifleştir" : "Aktifleştir", u.aktif ? "dugme-kirmizi" : "");
+          bFiyat.onclick = () => fiyatDegistir(u);
+          bMal.onclick = () => malGir(u);
+          bSayim.onclick = () => sayimYap(u);
+          bDurum.onclick = () => urunIstek("/urunler/durum", { urunId: u.id, aktif: !u.aktif });
+          sag.append(bFiyat, bMal, bSayim, bDurum);
+          el.appendChild(sag);
+          kap.appendChild(el);
+        }
+      } catch (hata) {
+        mesajGoster("mesaj", hata.message, "hata");
+      }
+    }
+
+    async function fiyatDegistir(u) {
+      const tl = window.prompt(u.ad + " için yeni satış fiyatı (TL):", (u.satisFiyatiKurus / 100).toFixed(2));
+      if (tl === null) return;
+      const sayi = parseFloat(tl);
+      if (!(sayi >= 0)) { mesajGoster("mesaj", "Geçerli fiyat girin.", "hata"); return; }
+      urunIstek("/urunler/fiyat", { urunId: u.id, yeniFiyatKurus: Math.round(sayi * 100) });
+    }
+    async function malGir(u) {
+      const adet = window.prompt(u.ad + " için kaç adet mal girişi?", "0");
+      if (adet === null) return;
+      const n = parseInt(adet, 10);
+      if (!(n > 0)) { mesajGoster("mesaj", "Geçerli adet girin.", "hata"); return; }
+      urunIstek("/urunler/stok-giris", { urunId: u.id, adet: n });
+    }
+    async function sayimYap(u) {
+      const sayilan = window.prompt(u.ad + " sayılan stok (mevcut: " + u.stokAdedi + "):", String(u.stokAdedi));
+      if (sayilan === null) return;
+      const n = parseInt(sayilan, 10);
+      if (!(n >= 0)) { mesajGoster("mesaj", "Geçerli sayı girin.", "hata"); return; }
+      const sebep = window.prompt("Sayım notu (isteğe bağlı):", "") || "";
+      urunIstek("/urunler/stok-sayim", { urunId: u.id, sayilanAdet: n, sebep });
+    }
+    async function urunIstek(yol, govde) {
+      try {
+        await apiCagir("POST", yol, govde);
+        await yukle();
       } catch (hata) {
         mesajGoster("mesaj", hata.message, "hata");
       }
