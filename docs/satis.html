@@ -6,6 +6,27 @@
   <title>Legend of the West — Satış</title>
   <link rel="stylesheet" href="stil.css?v=5" />
   <script>try{document.documentElement.dataset.tema=localStorage.getItem("yb-tema")||"koyu"}catch(e){document.documentElement.dataset.tema="koyu"}</script>
+  <style>
+    /* Fiş (80mm termal) — sadece yazdırırken görünür. */
+    #fis { display: none; }
+    @media print {
+      .uygulama, .hamburger { display: none !important; }
+      #fis {
+        display: block !important;
+        position: absolute; left: 0; top: 0; width: 100%;
+        font-family: 'Courier New', monospace; color: #000; background: #fff;
+        font-size: 13px; line-height: 1.4;
+      }
+      #fis .fis-baslik { text-align: center; font-weight: bold; font-size: 18px; }
+      #fis .fis-alt, #fis .fis-tesekkur { text-align: center; font-size: 12px; }
+      #fis .fis-satir { display: flex; justify-content: space-between; gap: 8px; }
+      #fis .fis-satir span:last-child { white-space: nowrap; }
+      #fis .fis-toplam { font-weight: bold; font-size: 15px; }
+      #fis .fis-cizgi { border-top: 1px dashed #000; margin: 4px 0; }
+      #fis .fis-tesekkur { margin-top: 8px; }
+      @page { size: 80mm auto; margin: 2mm; }
+    }
+  </style>
 </head>
 <body>
   <div class="uygulama">
@@ -55,7 +76,8 @@
                 <button class="dugme-vurgu" style="flex:1" id="btnOdemeOnay">Onayla</button>
               </div>
             </div>
-            <button class="dugme-vurgu dugme-blok" style="margin-top:12px" id="btnKapat">Hesabı kapat</button>
+            <button class="dugme-blok" style="margin-top:12px" id="btnFis">🧾 Fiş yazdır</button>
+            <button class="dugme-vurgu dugme-blok" style="margin-top:8px" id="btnKapat">Hesabı kapat</button>
           </div>
 
           <div style="margin-top:12px; border-top:1px solid var(--kenar); padding-top:12px;">
@@ -76,13 +98,15 @@
   </main>
   </div>
 
+  <div id="fis"></div>
+
   <script type="module">
     import {
       korumaVeProfil, kurusYaz,
       urunleriGetir, kategorileriGetir, masalariGetir, masayaAdisyonAc, masaBirlestir, masaBosalt,
       adisyonOzet, siparisIptal, odemeAl, hesapKapat, ODEME_YONTEMI, bugunGetir,
     } from "./uygulama.js";
-    import { posUrunPaneli, posAdisyonCiz } from "./pos.js";
+    import { posUrunPaneli, posAdisyonCiz, satirEtiketi } from "./pos.js";
     import { kabukKur } from "./kabuk.js";
 
     const profil = await korumaVeProfil();
@@ -203,6 +227,36 @@
       } catch (h) { mesaj(h.message); }
     }
 
+    // Adisyonu 80mm termal fişe bas (tarayıcı yazdır → termal yazıcı).
+    async function fisYazdir() {
+      if (!seciliAdisyonId) { mesaj("Önce masa seçin."); return; }
+      try {
+        const ozet = await adisyonOzet(seciliAdisyonId);
+        if (!ozet.satirlar.length) { mesaj("Fişte ürün yok."); return; }
+        const now = new Date();
+        const tarih = now.toLocaleDateString("tr-TR") + " " + now.toLocaleTimeString("tr-TR").slice(0, 5);
+        let s = "";
+        s += "<div class='fis-baslik'>LEGEND OF THE WEST</div>";
+        s += "<div class='fis-alt'>Hesap Fişi</div>";
+        s += "<div class='fis-cizgi'></div>";
+        s += "<div class='fis-satir'><span>" + (seciliMasa ? seciliMasa.ad : "") + "</span><span>" + tarih + "</span></div>";
+        s += "<div class='fis-cizgi'></div>";
+        for (const st of ozet.satirlar) {
+          s += "<div class='fis-satir'><span>" + st.netAdet + "x " + satirEtiketi(st) + "</span><span>" + kurusYaz(st.araToplamKurus) + "</span></div>";
+        }
+        s += "<div class='fis-cizgi'></div>";
+        s += "<div class='fis-satir fis-toplam'><span>TOPLAM</span><span>" + kurusYaz(ozet.ciroKurus) + "</span></div>";
+        if (ozet.odenenKurus > 0) {
+          s += "<div class='fis-satir'><span>Odenen</span><span>" + kurusYaz(ozet.odenenKurus) + "</span></div>";
+          s += "<div class='fis-satir'><span>Kalan</span><span>" + kurusYaz(ozet.kalanKurus) + "</span></div>";
+        }
+        s += "<div class='fis-cizgi'></div>";
+        s += "<div class='fis-tesekkur'>Tesekkur ederiz!</div>";
+        el("fis").innerHTML = s.replace(/₺/g, "TL");
+        window.print();
+      } catch (h) { mesaj(h.message); }
+    }
+
     async function kapat() {
       try {
         // Kalan ödeme varsa masa kapatılamaz — önce tamamı nakit/kart alınmalı (patron şeffaflığı).
@@ -259,6 +313,7 @@
     el("btnKartSec").onclick = () => odemeGirAc(ODEME_YONTEMI.KART);
     el("btnOdemeVaz").onclick = () => el("odemeGir").classList.add("gizli");
     el("btnOdemeOnay").onclick = odemeOnay;
+    el("btnFis").onclick = fisYazdir;
     el("btnKapat").onclick = kapat;
 
     yukle();
