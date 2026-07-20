@@ -27,6 +27,15 @@
     </div>
 
     <div class="bolum">
+      <h2>Stok değeri (eldeki mal)</h2>
+      <div class="istat">
+        <div class="kutu"><div class="sayi deger-vurgu" id="stokAlis">0,00 ₺</div><div class="etiket">Toplam alış değeri</div></div>
+        <div class="kutu"><div class="sayi deger-yesil" id="stokSatis">0,00 ₺</div><div class="etiket">Toplam satış değeri</div></div>
+        <div class="kutu"><div class="sayi" id="stokUrun">0</div><div class="etiket">Takipli ürün</div></div>
+      </div>
+    </div>
+
+    <div class="bolum">
       <h2>Gecelik rapor (kapanmış hesaplar)</h2>
       <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
         <div style="flex:1; min-width:150px;"><label>Başlangıç</label><input id="bas" type="datetime-local" /></div>
@@ -77,11 +86,33 @@
     import {
       korumaVeProfil, cikisYap, sifreDegistirAkisi, kurusYaz,
       masalariGetir, adisyonOzet, gecelikOzet, iptalDenetimi, denetimKayitlari, gunKapanislariGetir,
+      urunleriGetir,
     } from "./uygulama.js";
     import { kabukKur } from "./kabuk.js";
 
     const profil = await korumaVeProfil();
     kabukKur(profil);
+
+    // Eldeki mal değeri: takipli ürünlerde stok × birim (şişe) alış/satış.
+    function birim(u, alan) {
+      if (Array.isArray(u.secenekler) && u.secenekler.length) {
+        const sise = u.secenekler.find((s) => s.siseOrani === 1) || u.secenekler[u.secenekler.length - 1];
+        return sise[alan] || 0;
+      }
+      return u[alan] || 0;
+    }
+    async function stokDegeri() {
+      try {
+        const urunler = await urunleriGetir(false);
+        const takipli = urunler.filter((u) => u.aktif && u.stokTakip !== false);
+        let alis = 0, satis = 0;
+        for (const u of takipli) { const s = Number(u.stokAdedi) || 0; alis += s * birim(u, "maliyetKurus"); satis += s * birim(u, "satisFiyatiKurus"); }
+        document.getElementById("stokAlis").textContent = kurusYaz(alis);
+        document.getElementById("stokSatis").textContent = kurusYaz(satis);
+        document.getElementById("stokUrun").textContent = takipli.length;
+      } catch (h) { /* yoksay */ }
+    }
+    stokDegeri();
 
     function mesaj(m) { const k = document.getElementById("mesaj"); k.textContent = m; k.className = "mesaj hata"; }
     function iki(n) { return String(n).padStart(2, "0"); }

@@ -114,6 +114,17 @@ export async function stokSayimi(aktor, urun, sayilan, sebep) {
 export async function urunDurum(urun, aktif) {
   await updateDoc(doc(db, "urunler", urun.id), { aktif });
 }
+// Ürünün temel bilgilerini düzenler (ad/kategori/satış/maliyet/stok takip).
+export async function urunGuncelle(aktor, urun, g) {
+  const yeni = {};
+  if (g.ad != null) yeni.ad = g.ad;
+  if (g.kategori != null) yeni.kategori = g.kategori;
+  if (g.satisFiyatiKurus != null) yeni.satisFiyatiKurus = g.satisFiyatiKurus;
+  if (g.maliyetKurus != null) yeni.maliyetKurus = g.maliyetKurus;
+  if (g.stokTakip != null) yeni.stokTakip = g.stokTakip;
+  await updateDoc(doc(db, "urunler", urun.id), yeni);
+  await denetimEkle(aktor, "URUN_DUZENLEME", `${urun.ad} düzenlendi`);
+}
 
 // --- Kategoriler ---
 // Tanımlı kategoriler (sıralı). Ürün formu bundan seçtirir; POS barı bu sırayı kullanır.

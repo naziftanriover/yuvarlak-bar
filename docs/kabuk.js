@@ -28,9 +28,10 @@ const NAV = [
   { ad: "Ana Sayfa", ikon: "🏠", url: "bugun.html", roller: ["PATRON", "MUDUR"] },
   { ad: "Satış", ikon: "🍹", url: "satis.html", roller: ["PATRON", "MUDUR"] },
   { ad: "Sipariş", ikon: "🧾", url: "siparis.html", roller: ["GARSON"] },
+  { ad: "Stoklar", ikon: "📦", url: "stoklar.html", roller: ["PATRON", "MUDUR"] },
   { ad: "Aylık Rapor", ikon: "📊", url: "rapor.html", roller: ["PATRON"] },
-  { ad: "Stoklar", ikon: "📦", url: "satis.html?stok", roller: ["PATRON", "MUDUR"] },
   { ad: "Kullanıcılar", ikon: "👥", url: "kullanicilar.html", roller: ["PATRON"] },
+  { ad: "Ayarlar", ikon: "⚙️", url: "ayarlar.html", roller: ["PATRON", "MUDUR"] },
 ];
 
 export function kabukKur(profil) {

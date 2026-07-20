@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Yuvarlak Bar — Stoklar</title>
+  <link rel="stylesheet" href="stil.css?v=5" />
+</head>
+<body>
+  <div class="uygulama">
+  <main class="icerik">
+  <div class="kapsayici genis">
+    <div id="mesaj" class="mesaj gizli"></div>
+
+    <div class="bolum">
+      <h2>Stok değeri (eldeki mal)</h2>
+      <div class="istat">
+        <div class="kutu"><div class="sayi deger-vurgu" id="toplamAlis">0,00 ₺</div><div class="etiket">Toplam alış değeri</div></div>
+        <div class="kutu"><div class="sayi deger-yesil" id="toplamSatis">0,00 ₺</div><div class="etiket">Toplam satış değeri</div></div>
+        <div class="kutu"><div class="sayi" id="urunSayi">0</div><div class="etiket">Takipli ürün</div></div>
+      </div>
+      <div style="margin-top:10px; text-align:right;">
+        <button class="dugme-kucuk" id="btnYenile">Yenile</button>
+      </div>
+    </div>
+
+    <div class="bolum">
+      <h2>Stok takipli ürünler</h2>
+      <div id="stokListe"></div>
+    </div>
+
+    <div class="bolum">
+      <h2>Stok takipsiz ürünler</h2>
+      <div id="takipsizListe"></div>
+    </div>
+  </div>
+  </main>
+  </div>
+
+  <script type="module">
+    import { korumaVeProfil, kurusYaz, stokYaz, urunleriGetir, malGirisi, stokSayimi } from "./uygulama.js";
+    import { kabukKur } from "./kabuk.js";
+
+    const profil = await korumaVeProfil();
+    kabukKur(profil);
+
+    const el = (id) => document.getElementById(id);
+    function mesaj(m) { const k = el("mesaj"); k.textContent = m; k.className = "mesaj hata"; }
+    function bilgi(m) { const k = el("mesaj"); k.textContent = m; k.className = "mesaj bilgi"; }
+
+    // Porsiyonlu üründe şişe (siseOrani=1) fiyatını, yoksa temel fiyatı birim kabul et.
+    function birim(u, alan) {
+      if (Array.isArray(u.secenekler) && u.secenekler.length) {
+        const sise = u.secenekler.find((s) => s.siseOrani === 1) || u.secenekler[u.secenekler.length - 1];
+        return sise[alan] || 0;
+      }
+      return u[alan] || 0;
+    }
+
+    async function yukle() {
+      try {
+        const urunler = await urunleriGetir(false); // hepsi (pasif dahil)
+        const takipli = urunler.filter((u) => u.aktif && u.stokTakip !== false);
+        const takipsiz = urunler.filter((u) => u.aktif && u.stokTakip === false);
+
+        let topAlis = 0, topSatis = 0;
+        const kap = el("stokListe");
+        kap.innerHTML = takipli.length ? "" : '<div class="bos-not">Stok takipli ürün yok.</div>';
+        for (const u of takipli) {
+          const ma = birim(u, "maliyetKurus"), sa = birim(u, "satisFiyatiKurus");
+          const stok = Number(u.stokAdedi) || 0;
+          const alisDeg = stok * ma, satisDeg = stok * sa;
+          topAlis += alisDeg; topSatis += satisDeg;
+
+          const row = document.createElement("div");
+          row.className = "satir";
+          const sol = document.createElement("div");
+          sol.innerHTML = "<b>" + u.ad + "</b> <span class='alt' style='color:var(--soluk)'>· " + (u.kategori || "") + "</span><br>" +
+            "<span class='alt' style='color:var(--soluk)'>Stok: <b class='deger-vurgu'>" + stokYaz(stok) + " şişe</b> · birim alış " + kurusYaz(ma) + " · birim satış " + kurusYaz(sa) + "</span><br>" +
+            "<span class='alt' style='color:var(--soluk)'>Alış değeri: <b>" + kurusYaz(alisDeg) + "</b> · Satış değeri: <b class='deger-yesil'>" + kurusYaz(satisDeg) + "</b></span>";
+          const sag = document.createElement("span");
+          sag.style.display = "flex"; sag.style.gap = "6px"; sag.style.flexWrap = "wrap"; sag.style.flexShrink = "0";
+          const bMal = document.createElement("button"); bMal.className = "dugme-kucuk dugme-vurgu"; bMal.textContent = "Mal girişi";
+          const bSay = document.createElement("button"); bSay.className = "dugme-kucuk"; bSay.textContent = "Sayım";
+          bMal.onclick = async () => {
+            const t = window.prompt(u.ad + " — kaç şişe mal girişi?", "0");
+            if (t === null) return; const n = parseInt(t, 10);
+            if (!(n > 0)) return mesaj("Geçerli adet girin.");
+            try { await malGirisi(profil, u, n); bilgi(u.ad + ": " + n + " şişe eklendi."); yukle(); } catch (h) { mesaj(h.message); }
+          };
+          bSay.onclick = async () => {
+            const t = window.prompt(u.ad + " — sayılan gerçek stok (mevcut: " + stokYaz(stok) + "):", String(stok));
+            if (t === null) return; const n = parseFloat(t);
+            if (!(n >= 0)) return mesaj("Geçerli sayı girin.");
+            const sebep = window.prompt("Sayım notu (isteğe bağlı):", "") || "";
+            try { await stokSayimi(profil, u, n, sebep); bilgi(u.ad + ": stok " + stokYaz(n) + " olarak güncellendi."); yukle(); } catch (h) { mesaj(h.message); }
+          };
+          sag.append(bMal, bSay);
+          row.append(sol, sag);
+          kap.appendChild(row);
+        }
+        el("toplamAlis").textContent = kurusYaz(topAlis);
+        el("toplamSatis").textContent = kurusYaz(topSatis);
+        el("urunSayi").textContent = takipli.length;
+
+        const tk = el("takipsizListe");
+        tk.innerHTML = takipsiz.length ? "" : '<div class="bos-not">Stok takipsiz ürün yok.</div>';
+        for (const u of takipsiz) {
+          const row = document.createElement("div"); row.className = "satir";
+          row.innerHTML = "<span><b>" + u.ad + "</b> <span class='alt' style='color:var(--soluk)'>· " + (u.kategori || "") + " · stok takibi kapalı</span></span>";
+          tk.appendChild(row);
+        }
+      } catch (h) { mesaj(h.message); }
+    }
+
+    el("btnYenile").onclick = yukle;
+    yukle();
+  </script>
+</body>
+</html>
