@@ -86,7 +86,11 @@ export function kabukKur(profil) {
   cikis.onclick = cikisYap;
   ayar.append(ayarBaslik, tema, sifre, cikis);
 
-  yan.append(kapat, marka, kim, nav, ayar);
+  const imza = document.createElement("div");
+  imza.className = "yan-imza";
+  imza.textContent = "Nazif Tanrıöver tarafından tasarlanmıştır";
+
+  yan.append(kapat, marka, kim, nav, ayar, imza);
   uygulama.prepend(yan);
 
   // Mobil hamburger

@@ -236,6 +236,7 @@ label { display: block; font-size: 13px; color: var(--soluk); margin-bottom: 4px
 .yan-link .ikon { font-size: 18px; width: 22px; text-align: center; }
 .yan-ayar { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--kenar); display: flex; flex-direction: column; gap: 4px; }
 .yan-ayar .yan-baslik { font-size: 11px; color: var(--soluk); text-transform: uppercase; letter-spacing: 0.5px; padding: 4px 12px; }
+.yan-imza { margin-top: 10px; padding: 10px 12px 2px; border-top: 1px solid var(--kenar); font-size: 10px; font-style: italic; color: var(--soluk); opacity: 0.75; line-height: 1.3; }
 
 .icerik { flex: 1; min-width: 0; }
 .icerik .kapsayici, .icerik .kapsayici.genis { max-width: 100%; padding: 20px 26px; }
