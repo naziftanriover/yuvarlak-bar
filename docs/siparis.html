@@ -48,7 +48,7 @@
   <script type="module">
     import {
       korumaVeProfil, cikisYap, sifreDegistirAkisi, kurusYaz,
-      urunleriGetir, masalariGetir, masayaAdisyonAc, adisyonOzet, siparisIptal,
+      urunleriGetir, kategorileriGetir, masalariGetir, masayaAdisyonAc, adisyonOzet, siparisIptal,
     } from "./uygulama.js";
     import { posUrunPaneli, posAdisyonCiz } from "./pos.js";
 
@@ -58,6 +58,7 @@
     document.getElementById("btnCikis").onclick = cikisYap;
 
     let urunler = [];
+    let kategoriAdlari = [];
     let seciliAdisyonId = null;
 
     const el = (id) => document.getElementById(id);
@@ -67,8 +68,9 @@
     async function yukle() {
       mesajGizle();
       try {
-        const [masalar, aktif] = await Promise.all([masalariGetir(), urunleriGetir(true)]);
+        const [masalar, aktif, kategoriler] = await Promise.all([masalariGetir(), urunleriGetir(true), kategorileriGetir(true)]);
         urunler = aktif;
+        kategoriAdlari = kategoriler.map((k) => k.ad);
         masalariCiz(masalar);
       } catch (h) { mesaj(h.message); }
     }
@@ -97,6 +99,7 @@
         posUrunPaneli({
           profil, adisyonId: seciliAdisyonId, urunler,
           kategoriKok: el("kategoriBar"), izgaraKok: el("urunIzgara"),
+          kategoriAdlari,
           sonrasi: ozetYukle, hata: mesaj,
         });
         await ozetYukle();

@@ -31,10 +31,20 @@
 
       <div id="yonetimAlani" class="gizli">
         <div class="bolum">
+          <h2>Kategoriler</h2>
+          <form id="kategoriForm" style="display:flex; gap:10px; align-items:flex-end;">
+            <div style="flex:1;"><label>Yeni kategori adı</label><input id="kAd" placeholder="Örn: Alkollü İçecek" required /></div>
+            <button class="dugme" type="submit" style="margin-bottom:10px;">Ekle</button>
+          </form>
+          <div id="kategoriListe"></div>
+          <button class="dugme-kucuk" id="btnKategoriIceAktar" style="margin-top:8px;">Mevcut ürünlerden kategorileri içe aktar</button>
+        </div>
+
+        <div class="bolum">
           <h2>Ürün ekle</h2>
           <form id="urunForm">
             <label>Ürün adı</label><input id="uAd" required />
-            <label>Kategori</label><input id="uKategori" placeholder="Örn: Alkollü İçecek" required />
+            <label>Kategori</label><select id="uKategori" required></select>
             <label>Satış fiyatı (TL) <span class="alt" style="color:var(--soluk)">— porsiyon eklersen kullanılmaz</span></label>
             <input id="uFiyat" type="number" step="0.01" min="0" value="0" />
             <label>Maliyet (TL)</label><input id="uMaliyet" type="number" step="0.01" min="0" value="0" />
@@ -114,6 +124,7 @@
     import {
       korumaVeProfil, cikisYap, sifreDegistirAkisi, kurusYaz,
       urunleriGetir, urunEkle, urunSeceneklerGuncelle, fiyatGuncelle, malGirisi, stokSayimi, urunDurum,
+      kategorileriGetir, kategoriEkle, kategoriAdDegistir, kategoriDurum, kategoriSirala, kategorileriIceAktar,
       masalariGetir, masaEkle, masaAdDegistir, masayaAdisyonAc, masaTasi,
       adisyonOzet, siparisIptal, odemeAl, hesapKapat, ODEME_YONTEMI,
     } from "./uygulama.js";
@@ -126,6 +137,7 @@
 
     let urunler = [];
     let tumMasalar = [];
+    let kategoriler = [];
     let seciliAdisyonId = null;
     let seciliMasa = null;
     let yeniSecenekler = []; // yeni ürün için porsiyon tanımları
@@ -137,11 +149,51 @@
     async function yukle() {
       mesajGizle();
       try {
-        [tumMasalar, urunler] = await Promise.all([masalariGetir(), urunleriGetir(true)]);
+        [tumMasalar, urunler, kategoriler] = await Promise.all([masalariGetir(), urunleriGetir(true), kategorileriGetir(false)]);
         masalariCiz();
         masaDuzenleCiz();
+        kategoriYonetCiz();
+        kategoriSecimDoldur();
         urunYonetYukle();
       } catch (h) { mesaj(h.message); }
+    }
+
+    function aktifKategoriAdlari() {
+      return kategoriler.filter((k) => k.aktif !== false).map((k) => k.ad);
+    }
+
+    // Ürün formundaki kategori açılır listesi (tanımlı aktif kategoriler).
+    function kategoriSecimDoldur() {
+      const sec = document.getElementById("uKategori");
+      const adlar = aktifKategoriAdlari();
+      const oncekiDeger = sec.value;
+      sec.innerHTML = adlar.length ? "" : "<option value=''>Önce kategori ekleyin</option>";
+      for (const ad of adlar) {
+        const o = document.createElement("option");
+        o.value = ad; o.textContent = ad; sec.appendChild(o);
+      }
+      if (adlar.includes(oncekiDeger)) sec.value = oncekiDeger;
+    }
+
+    function kategoriYonetCiz() {
+      const kap = document.getElementById("kategoriListe");
+      kap.innerHTML = kategoriler.length ? "" : '<div class="bos-not">Henüz kategori yok. Yukarıdan ekleyin ya da içe aktarın.</div>';
+      kategoriler.forEach((kat, i) => {
+        const row = document.createElement("div");
+        row.className = "satir";
+        row.innerHTML = "<span><b>" + kat.ad + "</b>" + (kat.aktif === false ? " <span class='alt' style='color:var(--soluk)'>· pasif</span>" : "") + "</span>";
+        const sag = document.createElement("span");
+        sag.style.display = "flex"; sag.style.gap = "6px"; sag.style.flexWrap = "wrap";
+        const btn = (t, s) => { const b = document.createElement("button"); b.className = "dugme-kucuk " + (s || ""); b.textContent = t; return b; };
+        const bYukari = btn("↑"), bAsagi = btn("↓"), bAd = btn("Adı düzelt"), bDurum = btn(kat.aktif === false ? "Aktifleştir" : "Pasifleştir", kat.aktif === false ? "" : "dugme-kirmizi");
+        bYukari.disabled = i === 0; bAsagi.disabled = i === kategoriler.length - 1;
+        bYukari.onclick = async () => { try { await kategoriSirala(kat, -1); yukle(); } catch (h) { mesaj(h.message); } };
+        bAsagi.onclick = async () => { try { await kategoriSirala(kat, 1); yukle(); } catch (h) { mesaj(h.message); } };
+        bAd.onclick = async () => { const yeni = window.prompt("Yeni kategori adı:", kat.ad); if (!yeni || !yeni.trim()) return; try { await kategoriAdDegistir(profil, kat, yeni.trim()); yukle(); } catch (h) { mesaj(h.message); } };
+        bDurum.onclick = async () => { try { await kategoriDurum(kat, kat.aktif === false); yukle(); } catch (h) { mesaj(h.message); } };
+        sag.append(bYukari, bAsagi, bAd, bDurum);
+        row.appendChild(sag); kap.appendChild(row);
+      });
     }
 
     function masalariCiz() {
@@ -170,6 +222,7 @@
         posUrunPaneli({
           profil, adisyonId: seciliAdisyonId, urunler,
           kategoriKok: el("kategoriBar"), izgaraKok: el("urunIzgara"),
+          kategoriAdlari: aktifKategoriAdlari(),
           sonrasi: ozetYukle, hata: mesaj,
         });
         await ozetYukle();
@@ -301,10 +354,12 @@
       const porsiyonlu = yeniSecenekler.length > 0;
       const fiyat = parseFloat(el("uFiyat").value) || 0;
       const maliyet = parseFloat(el("uMaliyet").value) || 0;
+      const kategori = el("uKategori").value.trim();
+      if (!kategori) { mesaj("Önce 'Kategoriler' bölümünden bir kategori ekleyip seçin."); return; }
       if (!porsiyonlu && !(fiyat > 0)) { mesaj("Tek fiyatlı üründe satış fiyatı girin (ya da porsiyon ekleyin)."); return; }
       try {
         await urunEkle({
-          ad: el("uAd").value.trim(), kategori: el("uKategori").value.trim(),
+          ad: el("uAd").value.trim(), kategori,
           satisFiyatiKurus: Math.round((porsiyonlu ? (yeniSecenekler[0].satisFiyatiKurus / 100) : fiyat) * 100),
           maliyetKurus: Math.round((porsiyonlu ? (yeniSecenekler[0].maliyetKurus / 100) : maliyet) * 100),
           stokAdedi: parseInt(el("uStok").value, 10) || 0,
@@ -323,6 +378,16 @@
       try { await masaEkle(el("mAd").value.trim()); olay.target.reset(); yukle(); }
       catch (h) { mesaj(h.message); }
     });
+
+    el("kategoriForm").addEventListener("submit", async (olay) => {
+      olay.preventDefault();
+      try { await kategoriEkle(el("kAd").value.trim()); olay.target.reset(); yukle(); }
+      catch (h) { mesaj(h.message); }
+    });
+    el("btnKategoriIceAktar").onclick = async () => {
+      try { const n = await kategorileriIceAktar(); mesajGizle(); yukle(); if (!n) mesaj("İçe aktarılacak yeni kategori bulunamadı."); }
+      catch (h) { mesaj(h.message); }
+    };
 
     yukle();
   </script>

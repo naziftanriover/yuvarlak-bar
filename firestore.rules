@@ -38,6 +38,13 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Kategoriler: giriş yapan herkes okur; yönetim patron/müdür. Silme yok (pasifleştirme).
+    match /kategoriler/{id} {
+      allow read: if girisli();
+      allow create, update: if rolVar(['PATRON', 'MUDUR']);
+      allow delete: if false;
+    }
+
     // Masalar: okuma herkes; açma/taşıma/ad değişimi patron/müdür/garson. Silme yok.
     match /masalar/{id} {
       allow read: if girisli();

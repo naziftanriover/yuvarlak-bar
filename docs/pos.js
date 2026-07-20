@@ -106,10 +106,14 @@ function porsiyonNotPenceresi(urun) {
 }
 
 // --- Kategori barı + ürün ızgarası ---
-// cfg: { profil, adisyonId, urunler, kategoriKok, izgaraKok, sonrasi(), hata(mesaj) }
+// cfg: { profil, adisyonId, urunler, kategoriKok, izgaraKok, sonrasi(), hata(mesaj), kategoriAdlari? }
+// kategoriAdlari: tanımlı kategoriler (sıralı). Üründe olup listede olmayanlar sona eklenir.
 export function posUrunPaneli(cfg) {
   const { kategoriKok, izgaraKok } = cfg;
-  const kategoriler = [TUMU, ...[...new Set(cfg.urunler.map((u) => u.kategori || "Genel"))].sort((a, b) => a.localeCompare(b, "tr"))];
+  const tanimli = Array.isArray(cfg.kategoriAdlari) ? cfg.kategoriAdlari : [];
+  const urunKats = [...new Set(cfg.urunler.map((u) => u.kategori || "Genel"))];
+  const ekstra = urunKats.filter((k) => !tanimli.includes(k)).sort((a, b) => a.localeCompare(b, "tr"));
+  const kategoriler = [TUMU, ...tanimli, ...ekstra];
   let seciliKat = TUMU;
 
   function izgaraCiz() {

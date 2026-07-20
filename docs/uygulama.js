@@ -111,6 +111,58 @@ export async function urunDurum(urun, aktif) {
   await updateDoc(doc(db, "urunler", urun.id), { aktif });
 }
 
+// --- Kategoriler ---
+// Tanımlı kategoriler (sıralı). Ürün formu bundan seçtirir; POS barı bu sırayı kullanır.
+export async function kategorileriGetir(sadeceAktif) {
+  let anlik;
+  try { anlik = await getDocs(collection(db, "kategoriler")); }
+  catch (h) { if (h && h.code === "permission-denied") return []; throw h; }
+  const liste = anlik.docs.map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (a.sira ?? 0) - (b.sira ?? 0) || a.ad.localeCompare(b.ad, "tr"));
+  return sadeceAktif ? liste.filter((k) => k.aktif !== false) : liste;
+}
+export async function kategoriEkle(ad) {
+  const t = (ad || "").trim();
+  if (!t) throw new Error("Kategori adı boş olamaz.");
+  const mevcut = await kategorileriGetir(false);
+  if (mevcut.some((k) => k.ad.toLocaleLowerCase("tr") === t.toLocaleLowerCase("tr")))
+    throw new Error("Bu kategori zaten var.");
+  const sira = mevcut.length ? Math.max(...mevcut.map((k) => k.sira ?? 0)) + 1 : 0;
+  await addDoc(collection(db, "kategoriler"), { ad: t, sira, aktif: true });
+}
+export async function kategoriAdDegistir(aktor, kategori, yeniAd) {
+  const t = (yeniAd || "").trim();
+  if (!t) throw new Error("Kategori adı boş olamaz.");
+  await updateDoc(doc(db, "kategoriler", kategori.id), { ad: t });
+  // Eski ada sahip ürünleri de yeni ada taşı (tutarlılık; "icecek/İçecek" çiftini önler).
+  const anlik = await getDocs(query(collection(db, "urunler"), where("kategori", "==", kategori.ad)));
+  for (const d of anlik.docs) await updateDoc(doc(db, "urunler", d.id), { kategori: t });
+  await denetimEkle(aktor, "KATEGORI_DEGISIKLIGI", `${kategori.ad} -> ${t} (${anlik.size} ürün güncellendi)`);
+}
+export async function kategoriDurum(kategori, aktif) {
+  await updateDoc(doc(db, "kategoriler", kategori.id), { aktif });
+}
+// yon: -1 yukarı, +1 aşağı. Tüm sıraları yeni konuma göre yeniden yazar.
+export async function kategoriSirala(kategori, yon) {
+  const liste = await kategorileriGetir(false);
+  const i = liste.findIndex((k) => k.id === kategori.id);
+  const j = i + yon;
+  if (i < 0 || j < 0 || j >= liste.length) return;
+  const yeni = [...liste];
+  [yeni[i], yeni[j]] = [yeni[j], yeni[i]];
+  await Promise.all(yeni.map((k, idx) => updateDoc(doc(db, "kategoriler", k.id), { sira: idx })));
+}
+// Mevcut ürünlerdeki kategori adlarını tanımlı listeye ekler (bir defalık kurulum kolaylığı).
+export async function kategorileriIceAktar() {
+  const [urunler, tanimli] = await Promise.all([urunleriGetir(false), kategorileriGetir(false)]);
+  const varOlan = new Set(tanimli.map((k) => k.ad.toLocaleLowerCase("tr")));
+  const yeniAdlar = [...new Set(urunler.map((u) => (u.kategori || "").trim()).filter(Boolean))]
+    .filter((ad) => !varOlan.has(ad.toLocaleLowerCase("tr")));
+  let sira = tanimli.length ? Math.max(...tanimli.map((k) => k.sira ?? 0)) + 1 : 0;
+  for (const ad of yeniAdlar) await addDoc(collection(db, "kategoriler"), { ad, sira: sira++, aktif: true });
+  return yeniAdlar.length;
+}
+
 // --- Masalar ---
 export async function masalariGetir() {
   const anlik = await getDocs(collection(db, "masalar"));
