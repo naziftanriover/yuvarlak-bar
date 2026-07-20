@@ -58,6 +58,12 @@
     if (profil.rol === ROL.GARSON) { location.href = "siparis.html"; }
     kabukKur(profil);
 
+    // Ana sayfadayken müşteri ekranı (2. monitör) karşılamaya dönsün.
+    try {
+      localStorage.setItem("yb-ekran-son", JSON.stringify({ durum: "BOSTA" }));
+      new BroadcastChannel("yb-ekran").postMessage({ durum: "BOSTA" });
+    } catch (e) { /* yoksay */ }
+
     const el = (id) => document.getElementById(id);
     function mesaj(m) { const k = el("mesaj"); k.textContent = m; k.className = "mesaj hata"; }
 

@@ -374,7 +374,7 @@
       el("detayGorunum").classList.toggle("gizli", !detay);
       el("masaGorunum").classList.toggle("gizli", detay);
     }
-    function temizGorunum() { seciliAdisyonId = null; seciliMasa = null; gorunum(false); yukle(); }
+    function temizGorunum() { seciliAdisyonId = null; seciliMasa = null; gorunum(false); ekranGonder({ durum: "BOSTA" }); yukle(); }
     // ← Masalar: sipariş girilmemiş masayı otomatik boşalt.
     async function geri() {
       if (seciliAdisyonId && seciliMasa) {
@@ -398,6 +398,8 @@
     el("btnFis").onclick = fisYazdir;
     el("btnCekmece").onclick = cekmeceAc;
     el("btnKapat").onclick = kapat;
+    // Satış sayfasından ayrılınca (başka sayfaya geçiş/kapatma) müşteri ekranı karşılamaya dönsün.
+    window.addEventListener("pagehide", () => { try { ekranGonder({ durum: "BOSTA" }); } catch (e) {} });
 
     yukle();
   </script>
