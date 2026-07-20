@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Legend of the West — Otomatik Açılış Kurulumu</title>
+  <style>
+    body{ font-family: system-ui, Arial, sans-serif; max-width: 820px; margin: 0 auto; padding: 24px; background:#1c130a; color:#f2e6cf; line-height:1.55; }
+    h1{ color:#e6c168; font-size:24px; }
+    h2{ color:#e6c168; font-size:18px; margin-top:28px; }
+    .kutu{ background:#0f0a05; border:1px solid #4a3a1e; border-radius:10px; padding:14px; }
+    pre{ white-space:pre-wrap; word-break:break-all; margin:0; font-family:Consolas,monospace; font-size:13px; color:#ffe9b8; }
+    button{ background:#c8952f; color:#20160a; border:0; border-radius:8px; padding:12px 20px; font-size:16px; font-weight:700; cursor:pointer; margin-top:12px; }
+    button:active{ transform:translateY(1px); }
+    ol{ padding-left:20px; } li{ margin:8px 0; }
+    .vurgu{ color:#e6c168; font-weight:700; }
+    .not{ color:#b79a6a; font-size:14px; }
+    code{ background:#0f0a05; padding:2px 6px; border-radius:4px; color:#ffe9b8; }
+  </style>
+</head>
+<body>
+  <h1>⭐ Legend of the West — Otomatik Açılış Kurulumu</h1>
+  <p>Bu sayfayı <span class="vurgu">barın bilgisayarında (BIISON)</span> açtın demektir. Aşağıdaki adımlarla, bilgisayar her açıldığında iki ekran kendiliğinden hazır gelecek.</p>
+
+  <h2>1) Aşağıdaki metni kopyala</h2>
+  <div class="kutu"><pre id="kod">@echo off
+set U=https://naziftanriover.github.io/yuvarlak-bar
+start "" chrome --kiosk-printing --no-first-run --disable-session-crashed-bubble --window-position=1366,0 --window-size=1366,768 --app=%U%/musteri.html
+timeout /t 4 >nul
+start "" chrome --new-window %U%/giris.html</pre></div>
+  <button id="kopyala">📋 Kopyala</button>
+  <span id="durum" class="not"></span>
+
+  <h2>2) Notepad'e yapıştır ve kaydet</h2>
+  <ol>
+    <li>Başlat → <span class="vurgu">Notepad</span> aç.</li>
+    <li>Kopyaladığın metni içine <span class="vurgu">yapıştır</span> (Ctrl+V).</li>
+    <li>Menüden <span class="vurgu">File → Save As</span>.</li>
+    <li>Alttaki <span class="vurgu">"Save as type"</span> kısmını <span class="vurgu">"All Files"</span> yap (çok önemli — yoksa .txt olur).</li>
+    <li>Dosya adını <code>LegendWest.bat</code> yaz.</li>
+    <li>Kaydedilecek yer olarak <span class="vurgu">Başlangıç (Startup) klasörünü</span> seç (bir sonraki adım). Kaydet.</li>
+  </ol>
+
+  <h2>3) Başlangıç klasörünü aç (kaydederken buraya kaydet)</h2>
+  <ol>
+    <li>Klavyede <span class="vurgu">Windows tuşu + R</span>.</li>
+    <li>Açılan kutuya <code>shell:startup</code> yaz → Enter.</li>
+    <li>Açılan klasör Başlangıç klasörü. Notepad'de "Save As" yaparken bu klasörü seçip <code>LegendWest.bat</code> olarak kaydet.</li>
+  </ol>
+
+  <h2>4) Test et</h2>
+  <ol>
+    <li>Başlangıç klasöründeki <code>LegendWest.bat</code> dosyasına <span class="vurgu">çift tıkla</span>.</li>
+    <li>Chrome kapanıp yeniden açılmalı: <span class="vurgu">arka ekranda müşteri ekranı</span>, <span class="vurgu">ön ekranda kasa</span>.</li>
+    <li>Çalıştıysa 🎉 bilgisayarı bir <span class="vurgu">yeniden başlat</span> — açılışta kendiliğinden gelecek.</li>
+  </ol>
+
+  <p class="not">Not: Kasa penceresi yanlış ekrana gelirse bir kez ana ekrana sürükle. "Windows protected your PC" çıkarsa → More info → Run anyway. Sorun olursa ekranın fotoğrafını at.</p>
+</body>
+</html>
