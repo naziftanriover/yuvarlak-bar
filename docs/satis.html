@@ -203,9 +203,17 @@
     }
 
     async function kapat() {
-      if (!window.confirm("Hesap kapatılsın mı?")) return;
-      try { await hesapKapat(seciliAdisyonId, seciliMasa.id); temizGorunum(); }
-      catch (h) { mesaj(h.message); }
+      try {
+        // Kalan ödeme varsa masa kapatılamaz — önce tamamı nakit/kart alınmalı (patron şeffaflığı).
+        const ozet = await adisyonOzet(seciliAdisyonId);
+        if (ozet.kalanKurus > 0) {
+          mesaj("Hesap kapatılamaz: " + kurusYaz(ozet.kalanKurus) + " kalan ödeme var. Önce Nakit al / Kart al ile tahsil edin.");
+          return;
+        }
+        if (!window.confirm("Hesap kapatılsın mı?")) return;
+        await hesapKapat(seciliAdisyonId, seciliMasa.id);
+        temizGorunum();
+      } catch (h) { mesaj(h.message); }
     }
 
     function hedefMasaDoldur(mevcutId) {
