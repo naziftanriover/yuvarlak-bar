@@ -56,5 +56,21 @@ start "" chrome --new-window %U%/giris.html</pre></div>
   </ol>
 
   <p class="not">Not: Kasa penceresi yanlış ekrana gelirse bir kez ana ekrana sürükle. "Windows protected your PC" çıkarsa → More info → Run anyway. Sorun olursa ekranın fotoğrafını at.</p>
+
+  <script>
+    document.getElementById("kopyala").onclick = async () => {
+      const metin = document.getElementById("kod").textContent;
+      const durum = document.getElementById("durum");
+      try {
+        await navigator.clipboard.writeText(metin);
+        durum.textContent = " ✓ Kopyalandı! Şimdi Notepad'e yapıştır.";
+      } catch (e) {
+        // Yedek yöntem: metni seç
+        const r = document.createRange(); r.selectNodeContents(document.getElementById("kod"));
+        const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        durum.textContent = " Metin seçildi — Ctrl+C ile kopyala.";
+      }
+    };
+  </script>
 </body>
 </html>
