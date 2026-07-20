@@ -5,6 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Legend of the West — Bugün</title>
   <link rel="stylesheet" href="stil.css?v=5" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#2c1c10" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Legend of the West" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <link rel="icon" type="image/png" href="icon-192.png" />
+  <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(){})}</script>
   <script>try{document.documentElement.dataset.tema=localStorage.getItem("yb-tema")||"koyu"}catch(e){document.documentElement.dataset.tema="koyu"}</script>
 </head>
 <body>
