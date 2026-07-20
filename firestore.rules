@@ -85,5 +85,18 @@ service cloud.firestore {
       allow create: if rolVar(['PATRON', 'MUDUR']);
       allow update, delete: if false;
     }
+
+    // İş günü: canlı gün (gunler/aktif) toplamları sipariş giren herkesçe güncellenir.
+    match /gunler/{id} {
+      allow read: if girisli();
+      allow create, update: if rolVar(['PATRON', 'MUDUR', 'GARSON']);
+      allow delete: if false;
+    }
+    // Gün kapanışları (arşiv): yalnızca PATRON okur; kapatma patron/müdür; kilitli.
+    match /gunKapanislari/{id} {
+      allow read: if rolVar(['PATRON']);
+      allow create: if rolVar(['PATRON', 'MUDUR']);
+      allow update, delete: if false;
+    }
   }
 }

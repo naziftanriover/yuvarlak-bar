@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Yuvarlak Bar — Rapor</title>
-  <link rel="stylesheet" href="stil.css?v=3" />
+  <link rel="stylesheet" href="stil.css?v=4" />
 </head>
 <body>
   <div class="uygulama">
@@ -42,7 +42,6 @@
         <div class="istat" style="margin-top:12px;">
           <div class="kutu"><div class="sayi" id="rNakit">0,00 ₺</div><div class="etiket">Nakit</div></div>
           <div class="kutu"><div class="sayi" id="rKart">0,00 ₺</div><div class="etiket">Kart</div></div>
-          <div class="kutu" style="display:flex; align-items:center; justify-content:center;"><button class="dugme-vurgu" id="btnGece">Geceyi kapat</button></div>
         </div>
       </div>
     </div>
@@ -54,8 +53,17 @@
     </div>
 
     <div class="bolum">
-      <h2>Geçmiş gece kapanışları</h2>
-      <div id="gecmisListe"></div>
+      <h2>Aylık rapor — gün kapanışları</h2>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+        <div style="flex:1; min-width:150px;"><label>Ay</label><input id="ay" type="month" /></div>
+        <button class="dugme-vurgu" id="btnAy">Getir</button>
+      </div>
+      <div class="istat" style="margin-top:14px;">
+        <div class="kutu"><div class="sayi" id="ayGun">0</div><div class="etiket">Kapatılan gün</div></div>
+        <div class="kutu"><div class="sayi deger-vurgu" id="ayCiro">0,00 ₺</div><div class="etiket">Aylık gelir</div></div>
+        <div class="kutu"><div class="sayi deger-yesil" id="ayKar">0,00 ₺</div><div class="etiket">Aylık kâr</div></div>
+      </div>
+      <div id="gunListe" style="margin-top:12px;"></div>
     </div>
   </div>
   </main>
@@ -64,7 +72,7 @@
   <script type="module">
     import {
       korumaVeProfil, cikisYap, sifreDegistirAkisi, kurusYaz,
-      masalariGetir, adisyonOzet, gecelikOzet, iptalDenetimi, denetimKayitlari, geceKapat, geceGecmis,
+      masalariGetir, adisyonOzet, gecelikOzet, iptalDenetimi, denetimKayitlari, gunKapanislariGetir,
     } from "./uygulama.js";
     import { kabukKur } from "./kabuk.js";
 
@@ -126,30 +134,39 @@
       } catch (h) { mesaj(h.message); }
     }
 
-    async function geceKapatButon() {
-      if (!window.confirm("Bu dönem için gece kapanışı yapılsın mı? (kilitli kayıt)")) return;
-      const a = aralik();
-      try { await geceKapat(profil, a.bas, a.bit); window.alert("Gece kapanışı yapıldı."); gecmis(); }
-      catch (h) { mesaj(h.message); }
+    function ayAralik() {
+      const v = document.getElementById("ay").value; // "2026-07"
+      if (!v) return null;
+      const [y, m] = v.split("-").map(Number);
+      return { bas: new Date(y, m - 1, 1, 0, 0, 0).toISOString(), bit: new Date(y, m, 1, 0, 0, 0).toISOString() };
     }
-    async function gecmis() {
+    async function aylikGetir() {
+      const a = ayAralik();
+      if (!a) { mesaj("Ay seçin."); return; }
       try {
-        const liste = await geceGecmis();
-        const kap = document.getElementById("gecmisListe");
-        kap.innerHTML = liste.length ? "" : "<div class='satir'><span class='alt'>Henüz gece kapanışı yok.</span></div>";
-        for (const g of liste) {
+        const hepsi = await gunKapanislariGetir();
+        const gunler = hepsi.filter((g) => g.kapanis >= a.bas && g.kapanis < a.bit);
+        let ciro = 0, kar = 0;
+        const kap = document.getElementById("gunListe");
+        kap.innerHTML = gunler.length ? "" : "<div class='satir'><span class='alt'>Bu ayda kapatılmış gün yok.</span></div>";
+        for (const g of gunler) {
+          ciro += g.ciroKurus || 0; kar += g.karKurus || 0;
           const el = document.createElement("div"); el.className = "satir";
-          el.innerHTML = "<span><b>" + new Date(g.zaman).toLocaleDateString("tr-TR") + "</b> <span class='alt'>· " + g.adisyonSayisi + " hesap</span></span><span class='alt'>Ciro: <b class='deger-vurgu'>" + kurusYaz(g.ciroKurus) + "</b> · Kâr: <b class='deger-yesil'>" + kurusYaz(g.karKurus) + "</b></span>";
+          el.innerHTML = "<span><b>" + new Date(g.kapanis).toLocaleDateString("tr-TR") + "</b> <span class='alt'>· " + (g.siparisAdedi || 0) + " ürün</span></span><span class='alt'>Ciro: <b class='deger-vurgu'>" + kurusYaz(g.ciroKurus || 0) + "</b> · Kâr: <b class='deger-yesil'>" + kurusYaz(g.karKurus || 0) + "</b> · Nakit: " + kurusYaz(g.nakitKurus || 0) + " · Kart: " + kurusYaz(g.kartKurus || 0) + "</span>";
           kap.appendChild(el);
         }
+        document.getElementById("ayGun").textContent = gunler.length;
+        document.getElementById("ayCiro").textContent = kurusYaz(ciro);
+        document.getElementById("ayKar").textContent = kurusYaz(kar);
       } catch (h) { mesaj(h.message); }
     }
+    (function () { const d = new Date(); document.getElementById("ay").value = d.getFullYear() + "-" + iki(d.getMonth() + 1); })();
 
     document.getElementById("btnYenile").onclick = anlik;
     document.getElementById("btnRapor").onclick = raporGetir;
-    document.getElementById("btnGece").onclick = geceKapatButon;
+    document.getElementById("btnAy").onclick = aylikGetir;
 
-    anlik(); gecmis();
+    anlik(); aylikGetir();
     setInterval(anlik, 15000);
   </script>
 </body>

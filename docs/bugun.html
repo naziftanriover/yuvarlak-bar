@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Yuvarlak Bar — Bugün</title>
-  <link rel="stylesheet" href="stil.css?v=3" />
+  <link rel="stylesheet" href="stil.css?v=4" />
 </head>
 <body>
   <div class="uygulama">
@@ -15,14 +15,20 @@
     <div class="bolum">
       <h2>Bugün — anlık durum</h2>
       <div class="istat">
+        <div class="kutu"><div class="sayi deger-vurgu" id="bugunCiro">0,00 ₺</div><div class="etiket">Bugünün cirosu</div></div>
+        <div class="kutu"><div class="sayi deger-yesil" id="bugunKar">0,00 ₺</div><div class="etiket">Bugünün kârı</div></div>
         <div class="kutu"><div class="sayi" id="acikMasa">0</div><div class="etiket">Açık masa</div></div>
-        <div class="kutu"><div class="sayi deger-vurgu" id="acikCiro">0,00 ₺</div><div class="etiket">Açık ciro</div></div>
-        <div class="kutu"><div class="sayi deger-yesil" id="acikKar">0,00 ₺</div><div class="etiket">Açık kâr</div></div>
       </div>
-      <div style="margin-top:12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      <div class="istat" style="margin-top:12px;">
+        <div class="kutu"><div class="sayi" id="siparisAdedi">0</div><div class="etiket">Satılan ürün</div></div>
+        <div class="kutu"><div class="sayi" id="bugunNakit">0,00 ₺</div><div class="etiket">Nakit</div></div>
+        <div class="kutu"><div class="sayi" id="bugunKart">0,00 ₺</div><div class="etiket">Kart</div></div>
+      </div>
+      <div style="margin-top:14px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
         <a href="satis.html" class="dugme-vurgu" style="text-decoration:none; padding:12px 18px; border-radius:10px;">Satışa git →</a>
-        <span class="kim" id="guncelleme" style="color:var(--soluk); font-size:13px;"></span>
         <button class="dugme-kucuk" id="btnYenile">Yenile</button>
+        <span class="kim" id="guncelleme" style="color:var(--soluk); font-size:13px;"></span>
+        <button class="dugme-kirmizi" id="btnGunKapat" style="margin-left:auto;">Günü Kapat</button>
       </div>
     </div>
 
@@ -35,11 +41,10 @@
   </div>
 
   <script type="module">
-    import { korumaVeProfil, kurusYaz, ROL, masalariGetir, adisyonOzet } from "./uygulama.js";
+    import { korumaVeProfil, kurusYaz, ROL, masalariGetir, adisyonOzet, bugunGetir, gunuKapat } from "./uygulama.js";
     import { kabukKur } from "./kabuk.js";
 
     const profil = await korumaVeProfil();
-    // Garson ana sayfayı kullanmaz; sipariş ekranına gitsin.
     if (profil.rol === ROL.GARSON) { location.href = "siparis.html"; }
     kabukKur(profil);
 
@@ -48,26 +53,39 @@
 
     async function anlik() {
       try {
-        const masalar = await masalariGetir();
+        const [gun, masalar] = await Promise.all([bugunGetir(), masalariGetir()]);
+        el("bugunCiro").textContent = kurusYaz(gun.ciroKurus || 0);
+        el("bugunKar").textContent = kurusYaz(gun.karKurus || 0);
+        el("siparisAdedi").textContent = gun.siparisAdedi || 0;
+        el("bugunNakit").textContent = kurusYaz(gun.nakitKurus || 0);
+        el("bugunKart").textContent = kurusYaz(gun.kartKurus || 0);
+
         const dolu = masalar.filter((m) => m.durum === "DOLU" && m.acikAdisyonId);
-        let ciro = 0, kar = 0;
+        el("acikMasa").textContent = dolu.length;
         const liste = el("masaList"); liste.innerHTML = dolu.length ? "" : '<div class="bos-not">Şu an açık masa yok.</div>';
         for (const masa of dolu) {
           const ozet = await adisyonOzet(masa.acikAdisyonId);
-          ciro += ozet.ciroKurus; kar += ozet.karKurus;
           const a = document.createElement("a");
           a.className = "satir"; a.href = "satis.html"; a.style.textDecoration = "none"; a.style.color = "inherit";
-          a.innerHTML = "<span><b>" + masa.ad + "</b></span><span class='alt' style='color:var(--soluk)'>Ciro: <b class='deger-vurgu'>" + kurusYaz(ozet.ciroKurus) + "</b> · Kâr: <b class='deger-yesil'>" + kurusYaz(ozet.karKurus) + "</b></span>";
+          a.innerHTML = "<span><b>" + masa.ad + "</b></span><span class='alt' style='color:var(--soluk)'>Ciro: <b class='deger-vurgu'>" + kurusYaz(ozet.ciroKurus) + "</b> · Kalan: <b>" + kurusYaz(ozet.kalanKurus) + "</b></span>";
           liste.appendChild(a);
         }
-        el("acikMasa").textContent = dolu.length;
-        el("acikCiro").textContent = kurusYaz(ciro);
-        el("acikKar").textContent = kurusYaz(kar);
         el("guncelleme").textContent = "Güncelleme: " + new Date().toLocaleTimeString("tr-TR");
       } catch (h) { mesaj(h.message); }
     }
 
+    async function gunKapat() {
+      const gun = await bugunGetir();
+      if (!window.confirm("Günü kapatmak istediğine emin misin?\n\nBugünün cirosu: " + kurusYaz(gun.ciroKurus || 0) + "\nKâr: " + kurusYaz(gun.karKurus || 0) + "\n\nBu tutar rapora işlenir ve yeni gün sıfırdan başlar.")) return;
+      try {
+        const k = await gunuKapat(profil);
+        window.alert("Gün kapatıldı.\nCiro: " + kurusYaz(k.ciroKurus) + " · Kâr: " + kurusYaz(k.karKurus) + "\nNakit: " + kurusYaz(k.nakitKurus) + " · Kart: " + kurusYaz(k.kartKurus));
+        anlik();
+      } catch (h) { mesaj(h.message); }
+    }
+
     el("btnYenile").onclick = anlik;
+    el("btnGunKapat").onclick = gunKapat;
     anlik();
     setInterval(anlik, 15000);
   </script>

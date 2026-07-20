@@ -4,13 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Yuvarlak Bar — Satış</title>
-  <link rel="stylesheet" href="stil.css?v=3" />
+  <link rel="stylesheet" href="stil.css?v=4" />
 </head>
 <body>
   <div class="uygulama">
   <main class="icerik">
   <div class="kapsayici genis">
     <div id="mesaj" class="mesaj gizli"></div>
+
+    <div class="bugun-cip">Bugün ciro: <b class="deger-vurgu" id="cipCiro">0,00 ₺</b> · kâr: <b class="deger-yesil" id="cipKar">0,00 ₺</b></div>
 
     <div id="masaGorunum">
       <div class="bolum">
@@ -121,7 +123,7 @@
       urunleriGetir, urunEkle, urunSeceneklerGuncelle, fiyatGuncelle, malGirisi, stokSayimi, urunDurum,
       kategorileriGetir, kategoriEkle, kategoriAdDegistir, kategoriDurum, kategoriSirala, kategorileriIceAktar,
       masalariGetir, masaEkle, masaAdDegistir, masayaAdisyonAc, masaTasi,
-      adisyonOzet, siparisIptal, odemeAl, hesapKapat, ODEME_YONTEMI,
+      adisyonOzet, siparisIptal, odemeAl, hesapKapat, ODEME_YONTEMI, bugunGetir,
     } from "./uygulama.js";
     import { posUrunPaneli, posAdisyonCiz, seceneklerDuzenlePenceresi } from "./pos.js";
     import { kabukKur } from "./kabuk.js";
@@ -142,6 +144,12 @@
     function mesaj(m) { const k = el("mesaj"); k.textContent = m; k.className = "mesaj hata"; }
     function mesajGizle() { el("mesaj").className = "mesaj gizli"; }
 
+    // Üstteki canlı "bugün ciro" çipi.
+    async function bugunCip() {
+      try { const g = await bugunGetir(); el("cipCiro").textContent = kurusYaz(g.ciroKurus || 0); el("cipKar").textContent = kurusYaz(g.karKurus || 0); }
+      catch (h) { /* çip hatası satışı engellemesin */ }
+    }
+
     async function yukle() {
       mesajGizle();
       try {
@@ -151,6 +159,7 @@
         kategoriYonetCiz();
         kategoriSecimDoldur();
         urunYonetYukle();
+        bugunCip();
       } catch (h) { mesaj(h.message); }
     }
 
@@ -239,6 +248,7 @@
       el("odenen").textContent = kurusYaz(ozet.odenenKurus);
       el("kalan").textContent = kurusYaz(ozet.kalanKurus);
       el("odemeTutar").value = (ozet.kalanKurus / 100).toFixed(2);
+      bugunCip(); // her sipariş/iptal/ödeme sonrası bugün cirosu güncellensin
     }
 
     async function odeme(yontem) {

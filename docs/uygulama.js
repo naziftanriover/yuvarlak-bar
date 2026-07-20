@@ -232,6 +232,11 @@ export async function siparisEkle(aktor, adisyonId, urun, adet, secenek, not) {
   if (notMetni) hareket.not = notMetni;
   await addDoc(collection(db, "adisyonlar", adisyonId, "hareketler"), hareket);
   if (stokTakip) await updateDoc(doc(db, "urunler", urun.id), { stokAdedi: increment(-adet) });
+  // Bugünün cirosu anlık artsın.
+  await gunArtir({
+    ciroKurus: increment(fiyat * adet), maliyetKurus: increment(maliyet * adet),
+    karKurus: increment((fiyat - maliyet) * adet), siparisAdedi: increment(adet),
+  });
 }
 export async function siparisIptal(aktor, adisyonId, satir, adet, sebep) {
   if (!sebep || !sebep.trim()) throw new Error("İptal için sebep girilmeli.");
@@ -255,10 +260,18 @@ export async function siparisIptal(aktor, adisyonId, satir, adet, sebep) {
   const urunAnlik = await getDoc(doc(db, "urunler", satir.urunId));
   const stokTakip = urunAnlik.exists() ? urunAnlik.data().stokTakip !== false : true;
   if (stokTakip) await updateDoc(doc(db, "urunler", satir.urunId), { stokAdedi: increment(adet) });
+  // İptal, bugünün cirosundan düşülsün.
+  await gunArtir({
+    ciroKurus: increment(-satir.birimFiyatKurus * adet), maliyetKurus: increment(-satir.birimMaliyetKurus * adet),
+    karKurus: increment(-(satir.birimFiyatKurus - satir.birimMaliyetKurus) * adet),
+    siparisAdedi: increment(-adet), iptalAdedi: increment(adet),
+  });
 }
 export async function odemeAl(aktor, adisyonId, tutarKurus, yontem) {
   if (!(tutarKurus > 0)) throw new Error("Geçerli tutar girin.");
   await addDoc(collection(db, "adisyonlar", adisyonId, "odemeler"), { tutarKurus, yontem, kullaniciId: aktor.uid, zaman: simdi() });
+  // Günün nakit/kart toplamı (kasa mutabakatı için).
+  await gunArtir(yontem === ODEME_YONTEMI.NAKIT ? { nakitKurus: increment(tutarKurus) } : { kartKurus: increment(tutarKurus) });
 }
 export async function hesapKapat(adisyonId, masaId) {
   await updateDoc(doc(db, "adisyonlar", adisyonId), { durum: "KAPALI", kapanisZamani: simdi() });
@@ -269,6 +282,51 @@ export async function masaTasi(adisyonId, eskiMasaId, hedefMasa) {
   await updateDoc(doc(db, "adisyonlar", adisyonId), { masaId: hedefMasa.id });
   await updateDoc(doc(db, "masalar", eskiMasaId), { durum: "BOS", acikAdisyonId: null });
   await updateDoc(doc(db, "masalar", hedefMasa.id), { durum: "DOLU", acikAdisyonId: adisyonId });
+}
+
+// --- İş günü (bugün) ---
+// Tek canlı gün: gunler/aktif. Saat bağımsız — "Günü kapat" ile arşivlenip sıfırlanana kadar
+// aynı gün devam eder (gece yarısını geçse de). Toplamlar her siparişte increment ile artar.
+const AKTIF_GUN_ID = "aktif";
+function bosGun() {
+  return { durum: "ACIK", baslangic: simdi(), ciroKurus: 0, maliyetKurus: 0, karKurus: 0, siparisAdedi: 0, iptalAdedi: 0, nakitKurus: 0, kartKurus: 0 };
+}
+export async function bugunGetir() {
+  const ref = doc(db, "gunler", AKTIF_GUN_ID);
+  try {
+    const anlik = await getDoc(ref);
+    if (!anlik.exists()) { const yeni = bosGun(); await setDoc(ref, yeni); return { id: AKTIF_GUN_ID, ...yeni }; }
+    const d = anlik.data();
+    if (!d.baslangic) await setDoc(ref, { durum: "ACIK", baslangic: simdi() }, { merge: true });
+    return { id: AKTIF_GUN_ID, ...d };
+  } catch (h) {
+    if (h && h.code === "permission-denied") return { id: AKTIF_GUN_ID, ...bosGun() };
+    throw h;
+  }
+}
+// Günün toplamlarını artırır/azaltır. Kural henüz yayınlanmadıysa siparişi engellememek için izin hatasını yutar.
+async function gunArtir(alanlar) {
+  try { await setDoc(doc(db, "gunler", AKTIF_GUN_ID), alanlar, { merge: true }); }
+  catch (h) { if (!(h && h.code === "permission-denied")) throw h; }
+}
+export async function gunuKapat(aktor) {
+  const ref = doc(db, "gunler", AKTIF_GUN_ID);
+  const anlik = await getDoc(ref);
+  const d = anlik.exists() ? anlik.data() : bosGun();
+  const kayit = {
+    baslangic: d.baslangic || simdi(), kapanis: simdi(),
+    ciroKurus: d.ciroKurus || 0, maliyetKurus: d.maliyetKurus || 0, karKurus: d.karKurus || 0,
+    siparisAdedi: d.siparisAdedi || 0, iptalAdedi: d.iptalAdedi || 0,
+    nakitKurus: d.nakitKurus || 0, kartKurus: d.kartKurus || 0,
+    kapatanKullaniciId: aktor.uid, zaman: simdi(),
+  };
+  await addDoc(collection(db, "gunKapanislari"), kayit);
+  await setDoc(ref, bosGun()); // yeni gün sıfırdan
+  return kayit;
+}
+export async function gunKapanislariGetir() {
+  const anlik = await getDocs(collection(db, "gunKapanislari"));
+  return anlik.docs.map((x) => x.data()).sort((a, b) => (b.kapanis || "").localeCompare(a.kapanis || ""));
 }
 
 // --- Rapor / denetim / gece ---
