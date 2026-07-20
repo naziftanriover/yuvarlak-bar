@@ -74,7 +74,7 @@ export function yetkiVar(rol, izin) { return (ROL_IZIN[rol] || []).includes(izin
 // --- Ürünler ---
 export async function urunleriGetir(sadeceAktif) {
   const anlik = await getDocs(collection(db, "urunler"));
-  const liste = anlik.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const liste = anlik.docs.map((d) => ({ id: d.id, ...d.data() })).filter((u) => !u.silik);
   liste.sort((a, b) => (a.kategori + a.ad).localeCompare(b.kategori + b.ad, "tr"));
   return sadeceAktif ? liste.filter((u) => u.aktif) : liste;
 }
@@ -113,6 +113,12 @@ export async function stokSayimi(aktor, urun, sayilan, sebep) {
 }
 export async function urunDurum(urun, aktif) {
   await updateDoc(doc(db, "urunler", urun.id), { aktif });
+}
+// Ürünü sil: her yerden (satış, stok, yönetim) kalkar. Kayıt korunur (silik=true),
+// geçmiş satışlar kendi ürün adını/fiyatını sakladığı için etkilenmez.
+export async function urunSil(aktor, urun) {
+  await updateDoc(doc(db, "urunler", urun.id), { aktif: false, silik: true });
+  await denetimEkle(aktor, "URUN_SILME", `${urun.ad} silindi`);
 }
 // Ürünün temel bilgilerini düzenler (ad/kategori/satış/maliyet/stok takip).
 export async function urunGuncelle(aktor, urun, g) {

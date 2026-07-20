@@ -73,7 +73,7 @@
   <script type="module">
     import {
       korumaVeProfil, kurusYaz,
-      urunleriGetir, urunEkle, urunGuncelle, urunSeceneklerGuncelle, fiyatGuncelle, urunDurum,
+      urunleriGetir, urunEkle, urunGuncelle, urunSeceneklerGuncelle, fiyatGuncelle, urunDurum, urunSil,
       kategorileriGetir, kategoriEkle, kategoriAdDegistir, kategoriDurum, kategoriSirala, kategorileriIceAktar,
       masalariGetir, masaEkle, masaAdDegistir,
     } from "./uygulama.js";
@@ -137,11 +137,15 @@
         row.innerHTML = "<span><b>" + u.ad + "</b> <span class='alt' style='color:var(--soluk)'>· " + (u.kategori || "") + " · " + fiyatMetni + " · maliyet " + kurusYaz(u.maliyetKurus) + (u.aktif ? "" : " · pasif") + "</span></span>";
         const sag = document.createElement("span"); sag.style.display = "flex"; sag.style.gap = "6px"; sag.style.flexWrap = "wrap";
         const btn = (t, s) => { const b = document.createElement("button"); b.className = "dugme-kucuk " + (s || ""); b.textContent = t; return b; };
-        const bDuz = btn("Düzenle"), bPor = btn("Porsiyon"), bD = btn(u.aktif ? "Pasifleştir" : "Aktifleştir", u.aktif ? "dugme-kirmizi" : "");
+        const bDuz = btn("Düzenle"), bPor = btn("Porsiyon"), bD = btn(u.aktif ? "Pasifleştir" : "Aktifleştir", u.aktif ? "dugme-kirmizi" : ""), bSil = btn("Sil", "dugme-kirmizi");
         bDuz.onclick = () => urunDuzenle(u, row);
         bPor.onclick = async () => { const yeni = await seceneklerDuzenlePenceresi(u.ad + " — porsiyonlar", u.secenekler || []); if (yeni === null) return; try { await urunSeceneklerGuncelle(profil, u, yeni); yukle(); } catch (h) { mesaj(h.message); } };
         bD.onclick = async () => { try { await urunDurum(u, !u.aktif); yukle(); } catch (h) { mesaj(h.message); } };
-        sag.append(bDuz, bPor, bD); row.appendChild(sag); kap.appendChild(row);
+        bSil.onclick = async () => {
+          if (!window.confirm(u.ad + " ürününü SİLMEK istediğine emin misin? Listeden tamamen kalkar. (Geçmiş satışlar etkilenmez.)")) return;
+          try { await urunSil(profil, u); bilgi(u.ad + " silindi."); yukle(); } catch (h) { mesaj(h.message); }
+        };
+        sag.append(bDuz, bPor, bD, bSil); row.appendChild(sag); kap.appendChild(row);
       }
     }
 
