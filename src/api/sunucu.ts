@@ -180,9 +180,17 @@ async function yonlendir(req: IncomingMessage, bag: Bagimliliklar): Promise<unkn
       const g = await govdeJson(req);
       return bag.masa.ekle(aktor, g as never);
     }
+    case "POST /masalar/ad": {
+      const g = await govdeJson(req);
+      return bag.masa.adDegistir(aktor, String(g.masaId ?? ""), String(g.yeniAd ?? ""));
+    }
     case "POST /adisyon/ac": {
       const g = await govdeJson(req);
       return bag.adisyon.masayaAdisyonAc(aktor, String(g.masaId ?? ""));
+    }
+    case "POST /adisyon/tasi": {
+      const g = await govdeJson(req);
+      return bag.adisyon.masaTasi(aktor, String(g.adisyonId ?? ""), String(g.hedefMasaId ?? ""));
     }
     case "POST /adisyon/siparis": {
       const g = await govdeJson(req);

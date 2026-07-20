@@ -1,0 +1,23 @@
+import { chromium } from "playwright";
+const TABAN="http://127.0.0.1:4604";
+const CHROME="/opt/pw-browsers/chromium-1194/chrome-linux/chrome";
+async function api(m,y,t,g){const h={"Content-Type":"application/json"};if(t)h.Authorization="Bearer "+t;const c=await fetch(TABAN+y,{method:m,headers:h,body:g?JSON.stringify(g):undefined});const v=await c.json();if(!c.ok)throw new Error(y+" -> "+(v.hata||c.status));return v;}
+const id=()=>crypto.randomUUID();
+const {token:t}=await api("POST","/giris",null,{kullaniciAdi:"patron",sifre:"patron12345"});
+const efes=id();
+await api("POST","/urunler",t,{id:efes,ad:"Efes",kategori:"Bira",satisFiyatiKurus:15000,maliyetKurus:9000,stokAdedi:100});
+await api("POST","/urunler",t,{id:id(),ad:"Humus",kategori:"Meze",satisFiyatiKurus:8000,maliyetKurus:3500,stokAdedi:40});
+const m1=id();
+await api("POST","/masalar",t,{id:m1,ad:"Masa 1"});
+await api("POST","/masalar",t,{id:id(),ad:"Masa 2"});
+await api("POST","/masalar",t,{id:id(),ad:"Bahçe 1"});
+const a=await api("POST","/adisyon/ac",t,{masaId:m1});
+await api("POST","/adisyon/siparis",t,{adisyonId:a.id,urunId:efes,adet:3});
+const b=await chromium.launch({executablePath:CHROME});
+const s=await b.newPage({viewport:{width:960,height:1050}});
+await s.goto(TABAN+"/giris.html");await s.fill("#kullaniciAdi","patron");await s.fill("#sifre","patron12345");
+await s.click("button[type=submit]");await s.waitForURL("**/rapor.html");
+await s.goto(TABAN+"/satis.html");await s.waitForTimeout(1000);
+await s.click(".masa.dolu");await s.waitForTimeout(1000);
+await s.screenshot({path:"/tmp/ss-detay2.png",fullPage:true});
+await b.close();console.log("HAZIR");

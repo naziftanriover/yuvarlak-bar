@@ -25,6 +25,7 @@ import type { Aktor, Saglayicilar } from "./saglayicilar";
 
 export interface AdisyonServisi {
   masayaAdisyonAc(aktor: Aktor, masaId: string): Adisyon;
+  masaTasi(aktor: Aktor, adisyonId: string, hedefMasaId: string): Adisyon;
   siparisEkle(aktor: Aktor, adisyonId: string, urunId: string, adet: number): SiparisHareketi;
   siparisIptalEt(
     aktor: Aktor,
@@ -74,6 +75,29 @@ export function adisyonServisiOlustur(
       adisyonDepo.adisyonEkle(adisyon);
       masaDepo.guncelle(doluMasa);
       return adisyon;
+    },
+
+    masaTasi(aktor, adisyonId, hedefMasaId) {
+      yetkiDogrula(aktor.rol, IZIN.SIPARIS_GIR);
+      const adisyon = acikAdisyonuGetir(adisyonId);
+
+      const hedef = masaDepo.idIleGetir(hedefMasaId);
+      if (!hedef) {
+        throw new AdisyonHatasi(HATA_KODU.BULUNAMADI, "Hedef masa bulunamadi.");
+      }
+      // masaAc, hedef masa doluysa hata verir (cekirdek kurali).
+      const doluHedef = masaAc(hedef, adisyon.id);
+
+      // Eski masayi bosalt.
+      const eski = masaDepo.idIleGetir(adisyon.masaId);
+      if (eski) {
+        masaDepo.guncelle(masaKapat(eski));
+      }
+      masaDepo.guncelle(doluHedef);
+
+      const tasinmis = { ...adisyon, masaId: hedefMasaId };
+      adisyonDepo.adisyonGuncelle(tasinmis);
+      return tasinmis;
     },
 
     siparisEkle(aktor, adisyonId, urunId, adet) {

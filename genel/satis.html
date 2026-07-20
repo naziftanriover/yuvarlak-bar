@@ -45,6 +45,11 @@
       </div>
 
       <div class="bolum">
+        <h2>Masaları düzenle</h2>
+        <div id="masaDuzenle"></div>
+      </div>
+
+      <div class="bolum">
         <h2>Ürün yönetimi</h2>
         <div id="urunYonet"></div>
       </div>
@@ -63,7 +68,19 @@
 
       <div class="bolum">
         <h2>Ürün ekle</h2>
+        <div style="margin-bottom:10px; max-width:160px;">
+          <label>Adet</label>
+          <input id="adetSecim" type="number" min="1" value="1" />
+        </div>
         <div id="urunIzgara" class="izgara"></div>
+      </div>
+
+      <div class="bolum">
+        <h2>Masayı taşı</h2>
+        <div style="display:flex; gap:10px;">
+          <select id="hedefMasa" style="flex:1;"></select>
+          <button onclick="masaTasi()">Taşı</button>
+        </div>
       </div>
 
       <div class="bolum">
@@ -86,6 +103,7 @@
 
     let urunler = [];
     let seciliAdisyonId = null;
+    let tumMasalar = [];
 
     async function yukle() {
       try {
@@ -162,6 +180,8 @@
     }
 
     function masalariCiz(masalar) {
+      tumMasalar = masalar;
+      masaDuzenleCiz();
       const izgara = document.getElementById("masaIzgara");
       izgara.innerHTML = "";
       if (masalar.length === 0) {
@@ -189,6 +209,7 @@
         seciliAdisyonId = adisyonId;
         document.getElementById("detayBaslik").textContent = masa.ad;
         gorunumDegistir(true);
+        hedefMasaDoldur(masa.id);
         urunButonlariCiz();
         await ozetYukle();
       } catch (hata) {
@@ -213,9 +234,70 @@
     }
 
     async function siparisEkle(urunId) {
+      const adet = parseInt(document.getElementById("adetSecim").value, 10) || 1;
       try {
-        await apiCagir("POST", "/adisyon/siparis", { adisyonId: seciliAdisyonId, urunId, adet: 1 });
+        await apiCagir("POST", "/adisyon/siparis", { adisyonId: seciliAdisyonId, urunId, adet });
+        document.getElementById("adetSecim").value = 1;
         await ozetYukle();
+      } catch (hata) {
+        mesajGoster("mesaj", hata.message, "hata");
+      }
+    }
+
+    function masaDuzenleCiz() {
+      const kap = document.getElementById("masaDuzenle");
+      kap.innerHTML = tumMasalar.length === 0 ? "<div class='satir'><span class='alt'>Henüz masa yok.</span></div>" : "";
+      for (const masa of tumMasalar) {
+        const el = document.createElement("div");
+        el.className = "satir";
+        el.innerHTML = "<span><b>" + masa.ad + "</b> <span class='alt'>· " + (masa.durum === "DOLU" ? "dolu" : "boş") + "</span></span>";
+        const b = document.createElement("button");
+        b.className = "dugme-kucuk";
+        b.textContent = "Adı değiştir";
+        b.onclick = () => masaAdiDegistir(masa);
+        const sag = document.createElement("span");
+        sag.appendChild(b);
+        el.appendChild(sag);
+        kap.appendChild(el);
+      }
+    }
+
+    async function masaAdiDegistir(masa) {
+      const yeni = window.prompt("Yeni masa adı:", masa.ad);
+      if (yeni === null || yeni.trim() === "") return;
+      try {
+        await apiCagir("POST", "/masalar/ad", { masaId: masa.id, yeniAd: yeni.trim() });
+        yukle();
+      } catch (hata) {
+        mesajGoster("mesaj", hata.message, "hata");
+      }
+    }
+
+    function hedefMasaDoldur(mevcutMasaId) {
+      const sec = document.getElementById("hedefMasa");
+      const boslar = tumMasalar.filter((m) => m.durum === "BOS" && m.id !== mevcutMasaId);
+      sec.innerHTML = "";
+      if (boslar.length === 0) {
+        sec.innerHTML = "<option value=''>Boş masa yok</option>";
+        return;
+      }
+      for (const m of boslar) {
+        const o = document.createElement("option");
+        o.value = m.id;
+        o.textContent = m.ad;
+        sec.appendChild(o);
+      }
+    }
+
+    async function masaTasi() {
+      const hedef = document.getElementById("hedefMasa").value;
+      if (!hedef) {
+        mesajGoster("mesaj", "Taşınacak boş masa seçin.", "hata");
+        return;
+      }
+      try {
+        await apiCagir("POST", "/adisyon/tasi", { adisyonId: seciliAdisyonId, hedefMasaId: hedef });
+        geriDon();
       } catch (hata) {
         mesajGoster("mesaj", hata.message, "hata");
       }

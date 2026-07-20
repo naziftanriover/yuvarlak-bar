@@ -35,6 +35,10 @@
       </div>
       <div class="bolum">
         <h2>Ürün ekle</h2>
+        <div style="margin-bottom:10px; max-width:160px;">
+          <label>Adet</label>
+          <input id="adetSecim" type="number" min="1" value="1" />
+        </div>
         <div id="urunIzgara" class="izgara"></div>
       </div>
     </div>
@@ -113,8 +117,10 @@
     }
 
     async function siparisEkle(urunId) {
+      const adet = parseInt(document.getElementById("adetSecim").value, 10) || 1;
       try {
-        await apiCagir("POST", "/adisyon/siparis", { adisyonId: seciliAdisyonId, urunId, adet: 1 });
+        await apiCagir("POST", "/adisyon/siparis", { adisyonId: seciliAdisyonId, urunId, adet });
+        document.getElementById("adetSecim").value = 1;
         await ozetYukle();
       } catch (hata) {
         mesajGoster("mesaj", hata.message, "hata");
