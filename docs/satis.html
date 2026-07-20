@@ -44,6 +44,9 @@
     <div id="mesaj" class="mesaj gizli"></div>
 
     <div class="bugun-cip">Bugün ciro: <b class="deger-vurgu" id="cipCiro">0,00 ₺</b> · kâr: <b class="deger-yesil" id="cipKar">0,00 ₺</b></div>
+    <div style="margin:-4px 0 12px; text-align:right;">
+      <button class="dugme-kucuk" id="btnCekmece">💵 Çekmeceyi Aç</button>
+    </div>
 
     <div id="masaGorunum">
       <div class="bolum">
@@ -266,6 +269,13 @@
       } catch (h) { mesaj(h.message); }
     }
 
+    // Çekmeceyi aç: boş fiş bas — yazıcı çekmeceyi açar (kâğıt en aza iner).
+    function cekmeceAc() {
+      el("fis").innerHTML = "<div style='height:2mm'></div>";
+      window.print();
+      bilgi("Çekmece açılıyor.");
+    }
+
     async function kapat() {
       try {
         // Kalan ödeme varsa masa kapatılamaz — önce tamamı nakit/kart alınmalı (patron şeffaflığı).
@@ -323,6 +333,7 @@
     el("btnOdemeVaz").onclick = () => el("odemeGir").classList.add("gizli");
     el("btnOdemeOnay").onclick = odemeOnay;
     el("btnFis").onclick = fisYazdir;
+    el("btnCekmece").onclick = cekmeceAc;
     el("btnKapat").onclick = kapat;
 
     yukle();
