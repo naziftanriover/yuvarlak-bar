@@ -112,6 +112,8 @@
       }
     }
 
+    window.ciz = ciz; // Firebase modülü de çağırabilsin
+
     // İlk açılışta son durumu localStorage'dan al (kasa ekranıyla aynı tarayıcı)
     try { ciz(JSON.parse(localStorage.getItem("yb-ekran-son") || "null")); } catch(e){ ciz(null); }
 
@@ -123,6 +125,20 @@
     window.addEventListener("storage", (e) => {
       if (e.key === "yb-ekran-son") { try { ciz(JSON.parse(e.newValue||"null")); } catch(_){} }
     });
+  </script>
+
+  <!-- Ayrı pencere/profilde çalışırken canlı veriyi Firebase'den al (giriş gerektirmez). -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { firebaseConfig } from "./firebase-config.js";
+    try {
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
+      onSnapshot(doc(db, "ekran", "aktif"),
+        (snap) => { if (snap.exists() && window.ciz) window.ciz(snap.data()); },
+        (err) => { /* okuma engellenirse marka ekranı kalır */ });
+    } catch (e) { /* Firebase yoksa localStorage/BroadcastChannel ile devam */ }
   </script>
 </body>
 </html>

@@ -234,6 +234,13 @@ export async function adisyonOzet(adisyonId) {
   const [h, o] = await Promise.all([hareketleriGetir(adisyonId), odemeleriGetir(adisyonId)]);
   return ozetHesapla(h, o);
 }
+
+// Müşteri ekranı (2. monitör) için canlı durum. ekran/aktif dokümanına yazar;
+// müşteri ekranı bu dokümanı canlı dinler (giriş gerektirmeyen public okuma).
+export async function ekranYaz(veri) {
+  try { await setDoc(doc(db, "ekran", "aktif"), { ...veri, guncelleme: simdi() }); }
+  catch (h) { /* kurallar yayınlanmadıysa müşteri ekranı yine markayı gösterir */ }
+}
 // Porsiyonlu sipariş: secenek {ad, satisFiyatiKurus, maliyetKurus} ya da null; not isteğe bağlı.
 export async function siparisEkle(aktor, adisyonId, urun, adet, secenek, not) {
   if (!(adet >= 1)) throw new Error("Adet en az 1 olmalı.");

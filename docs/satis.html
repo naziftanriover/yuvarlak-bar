@@ -116,7 +116,7 @@
     import {
       korumaVeProfil, kurusYaz,
       urunleriGetir, kategorileriGetir, masalariGetir, masayaAdisyonAc, masaBirlestir, masaBosalt,
-      adisyonOzet, siparisIptal, odemeAl, hesapKapat, ODEME_YONTEMI, bugunGetir,
+      adisyonOzet, siparisIptal, odemeAl, hesapKapat, ODEME_YONTEMI, bugunGetir, ekranYaz,
     } from "./uygulama.js";
     import { posUrunPaneli, posAdisyonCiz, satirEtiketi } from "./pos.js";
     import { kabukKur } from "./kabuk.js";
@@ -143,6 +143,7 @@
     function ekranGonder(veri) {
       try { localStorage.setItem("yb-ekran-son", JSON.stringify(veri)); } catch (e) {}
       try { if (ekranKanal) ekranKanal.postMessage(veri); } catch (e) {}
+      try { ekranYaz(veri); } catch (e) {} // ayrı penceredeki müşteri ekranı için (Firebase)
     }
 
     async function bugunCip() {
