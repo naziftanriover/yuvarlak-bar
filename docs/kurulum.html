@@ -9,7 +9,7 @@
     h1{ color:#e6c168; font-size:23px; }
     h2{ color:#e6c168; font-size:18px; margin-top:28px; }
     .kutu{ background:#0f0a05; border:1px solid #4a3a1e; border-radius:10px; padding:14px; margin-top:8px; }
-    pre{ white-space:pre-wrap; word-break:break-all; margin:0; font-family:Consolas,monospace; font-size:12.5px; color:#ffe9b8; }
+    pre{ white-space:pre-wrap; word-break:break-all; margin:0; font-family:Consolas,monospace; font-size:12px; color:#ffe9b8; max-height:260px; overflow:auto; }
     button{ background:#c8952f; color:#20160a; border:0; border-radius:8px; padding:12px 22px; font-size:16px; font-weight:700; cursor:pointer; margin-top:12px; }
     button:active{ transform:translateY(1px); }
     ol{ padding-left:20px; } li{ margin:8px 0; }
@@ -20,54 +20,55 @@
   </style>
 </head>
 <body>
-  <h1>⭐ Legend of the West — Otomatik Açılış (kesin sürüm)</h1>
-  <p>Bu sürüm iki ekranı da doğrudan kendi yerine açar — <b>tek dosya</b>, taşıma yok.</p>
+  <h1>⭐ Legend of the West — Otomatik Açılış (canlı hesaplı)</h1>
+  <p>Kasa penceresi otomatik ana ekrana taşınır, müşteri ekranı arkada canlı hesabı gösterir. <b>İki dosya</b> — ikisi de aynı klasörde (Başlangıç).</p>
 
-  <div class="adim"><b>Önce eski dosyaları sil:</b> Başlangıç klasöründe daha önce koyduğun <code>LegendWest.bat</code> ve <code>LegendWest.ps1</code> varsa ikisini de sil.</div>
+  <div class="adim"><b>Önce eski dosyaları sil:</b> Başlangıç klasöründe eski <code>LegendWest.bat</code> / <code>LegendWest.ps1</code> varsa hepsini sil.</div>
 
-  <h2>1) Aşağıdaki metni kopyala</h2>
-  <div class="kutu"><pre id="kod"></pre></div>
-  <button id="kopyala">📋 Kopyala</button> <span id="durum" class="not"></span>
-
-  <h2>2) Notepad'e yapıştır ve kaydet</h2>
+  <h2>DOSYA 1 — LegendWest.ps1</h2>
+  <div class="kutu"><pre id="kod1">yükleniyor…</pre></div>
+  <button data-h="kod1" data-ad="Dosya 1" class="kop">📋 Dosya 1'i Kopyala</button>
   <ol>
-    <li>Notepad aç → yapıştır (Ctrl+V).</li>
-    <li><b>File → Save As</b> → alttaki <b>"Save as type"</b>ı <span class="vurgu">All Files</span> yap.</li>
-    <li>Dosya adı: <code>LegendWest.bat</code></li>
-    <li>Kaydedilecek yer: <span class="vurgu">Başlangıç klasörü</span> — Dosya Gezgini adres çubuğuna <code>shell:startup</code> yazıp aç, oraya kaydet.</li>
+    <li>Notepad aç → yapıştır.</li>
+    <li><b>File → Save As</b> → "Save as type" = <span class="vurgu">All Files</span> → adı <code>LegendWest.ps1</code> → <span class="vurgu">Başlangıç klasörüne</span> kaydet.</li>
   </ol>
 
-  <h2>3) Test et</h2>
+  <h2>DOSYA 2 — LegendWest.bat</h2>
+  <div class="kutu"><pre id="kod2">yükleniyor…</pre></div>
+  <button data-h="kod2" data-ad="Dosya 2" class="kop">📋 Dosya 2'yi Kopyala</button>
   <ol>
-    <li><code>LegendWest.bat</code>'a <span class="vurgu">çift tıkla</span>.</li>
-    <li>Açık Chrome'lar kapanır, sonra: <span class="vurgu">arka ekranda müşteri (karşılama) ekranı</span>, <span class="vurgu">ön ekranda kasa</span> açılır.</li>
-    <li>Doğruysa 🎉 bilgisayarı yeniden başlat — açılışta otomatik gelir.</li>
+    <li>Yeni Notepad → yapıştır.</li>
+    <li><b>File → Save As</b> → "Save as type" = <span class="vurgu">All Files</span> → adı <code>LegendWest.bat</code> → <span class="vurgu">aynı Başlangıç klasörüne</span> kaydet.</li>
   </ol>
 
-  <p class="not">Not: Bu sürümde müşteri ekranı marka/karşılama gösterir. Ekranlar yine ters açılırsa (çok düşük ihtimal) bana yaz. "Windows protected your PC" çıkarsa → More info → Run anyway.</p>
+  <div class="adim"><b>Başlangıç klasörü:</b> Dosya Gezgini adres çubuğuna <code>shell:startup</code> yazıp aç. İki dosya da bu klasörde olmalı.</div>
+
+  <h2>Test</h2>
+  <ol>
+    <li><code>LegendWest.bat</code>'a çift tıkla.</li>
+    <li>~15 saniye <span class="vurgu">hiçbir şeye dokunmadan</span> bekle. Müşteri ekranı arkada açılır, kasa penceresi açılıp <span class="vurgu">kendiliğinden ana ekrana geçip büyür</span>.</li>
+    <li>Doğruysa 🎉 bilgisayarı yeniden başlat.</li>
+  </ol>
+  <p class="not">Test sırasında mouse/klavyeye dokunma, bırak kendi taşısın. "Windows protected your PC" → More info → Run anyway. Yine olmazsa yaz, en basit (marka ekranlı) sürüme döneriz.</p>
 
   <script>
-    const bat = [
-"@echo off",
-"set U=https://naziftanriover.github.io/yuvarlak-bar",
-"taskkill /IM chrome.exe /F >nul 2>&1",
-"timeout /t 2 >nul",
-"start \"\" chrome --kiosk-printing --no-first-run --no-default-browser-check --user-data-dir=\"%LOCALAPPDATA%\\lw-musteri\" --window-position=1366,0 --window-size=1366,768 --app=%U%/musteri.html",
-"timeout /t 2 >nul",
-"start \"\" chrome --kiosk-printing --window-position=0,0 --start-maximized %U%/giris.html"
-    ].join("\r\n");
-
-    document.getElementById("kod").textContent = bat;
-
-    document.getElementById("kopyala").onclick = async () => {
-      const durum = document.getElementById("durum");
-      try { await navigator.clipboard.writeText(bat); durum.textContent = " ✓ Kopyalandı! Notepad'e yapıştır."; }
-      catch (e) {
-        const r = document.createRange(); r.selectNodeContents(document.getElementById("kod"));
-        const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
-        durum.textContent = " Metin seçildi — Ctrl+C ile kopyala.";
-      }
-    };
+    async function yukle(id, dosya) {
+      try { const r = await fetch(dosya + "?t=" + Date.now()); document.getElementById(id).textContent = await r.text(); }
+      catch (e) { document.getElementById(id).textContent = "Yüklenemedi — sayfayı yenile."; }
+    }
+    yukle("kod1", "lw-ps1.txt");
+    yukle("kod2", "lw-bat.txt");
+    document.querySelectorAll(".kop").forEach((b) => {
+      b.onclick = async () => {
+        const metin = document.getElementById(b.dataset.h).textContent;
+        try { await navigator.clipboard.writeText(metin); b.textContent = "✓ Kopyalandı!"; }
+        catch (e) {
+          const r = document.createRange(); r.selectNodeContents(document.getElementById(b.dataset.h));
+          const s = window.getSelection(); s.removeAllRanges(); s.addRange(r); b.textContent = "Seçildi — Ctrl+C";
+        }
+        setTimeout(() => { b.textContent = "📋 " + b.dataset.ad + "'i Kopyala"; }, 2500);
+      };
+    });
   </script>
 </body>
 </html>
