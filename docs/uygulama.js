@@ -187,7 +187,7 @@ export async function kategorileriIceAktar() {
 // --- Masalar ---
 export async function masalariGetir() {
   const anlik = await getDocs(collection(db, "masalar"));
-  return anlik.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => a.ad.localeCompare(b.ad, "tr"));
+  return anlik.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => a.ad.localeCompare(b.ad, "tr", { numeric: true }));
 }
 export async function masaEkle(ad) {
   await addDoc(collection(db, "masalar"), { ad, durum: "BOS", acikAdisyonId: null });
