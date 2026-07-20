@@ -129,6 +129,11 @@ label { display: block; font-size: 13px; color: var(--soluk); margin-bottom: 4px
 
 .geri { background: none; border: none; color: var(--vurgu); padding: 0; margin-bottom: 12px; font-size: 14px; }
 
+/* Anma köşesi (giriş ekranı) */
+.anma { max-width: 320px; margin: 4px auto 8vh; text-align: center; }
+.anma-foto { width: 100%; border-radius: 14px; border: 1px solid var(--kenar); display: block; box-shadow: 0 6px 20px rgba(0,0,0,0.35); }
+.anma-yazi { margin-top: 14px; font-size: 24px; letter-spacing: 6px; font-weight: 600; color: var(--soluk); }
+
 /* ============ POS (satış) ekranı ============ */
 .kapsayici.genis { max-width: 1180px; }
 
