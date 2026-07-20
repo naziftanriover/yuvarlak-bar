@@ -4,21 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Yuvarlak Bar — Kullanıcılar</title>
-  <link rel="stylesheet" href="stil.css?v=2" />
+  <link rel="stylesheet" href="stil.css?v=3" />
 </head>
 <body>
-  <div class="baslik">
-    <h1><span class="marka">Yuvarlak Bar</span> · Kullanıcılar</h1>
-    <div>
-      <span class="kim" id="kim"></span>
-      <button class="dugme-kucuk" id="btnSifre">Şifre</button>
-      <button class="dugme-kucuk" id="btnCikis">Çıkış</button>
-    </div>
-  </div>
-
+  <div class="uygulama">
+  <main class="icerik">
   <div class="kapsayici">
     <div id="mesaj" class="mesaj gizli"></div>
-    <a href="rapor.html" class="geri" style="display:inline-block; text-decoration:none;">← Rapora dön</a>
 
     <div class="bolum">
       <h2>Yeni kullanıcı ekle</h2>
@@ -41,14 +33,15 @@
       <div id="liste"></div>
     </div>
   </div>
+  </main>
+  </div>
 
   <script type="module">
     import { korumaVeProfil, cikisYap, sifreDegistirAkisi, kullanicilariGetir, kullaniciEkle, kullaniciDurum, yetkiVar } from "./uygulama.js";
+    import { kabukKur } from "./kabuk.js";
 
     const profil = await korumaVeProfil();
-    document.getElementById("kim").textContent = profil.ad + " (" + profil.rol + ")";
-    document.getElementById("btnSifre").onclick = sifreDegistirAkisi;
-    document.getElementById("btnCikis").onclick = cikisYap;
+    kabukKur(profil);
 
     // Sadece patron yönetebilir.
     if (!yetkiVar(profil.rol, "KULLANICI")) { location.href = "rapor.html"; }

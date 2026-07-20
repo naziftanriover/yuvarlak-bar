@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Yuvarlak Bar — Giriş</title>
-  <link rel="stylesheet" href="stil.css?v=2" />
+  <link rel="stylesheet" href="stil.css?v=3" />
 </head>
 <body>
   <div class="kapsayici">
@@ -29,11 +29,12 @@
 
   <script type="module">
     import { girisYap, mevcutProfil, ROL } from "./uygulama.js";
+    import { temaUygula } from "./kabuk.js";
+    temaUygula();
 
     function yonlendir(rol) {
-      if (rol === ROL.PATRON) location.href = "rapor.html";
-      else if (rol === ROL.GARSON) location.href = "siparis.html";
-      else location.href = "satis.html";
+      if (rol === ROL.GARSON) location.href = "siparis.html";
+      else location.href = "bugun.html";
     }
     function mesaj(metin) {
       const k = document.getElementById("mesaj");
