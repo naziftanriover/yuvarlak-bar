@@ -215,7 +215,7 @@ label { display: block; font-size: 13px; color: var(--soluk); margin-bottom: 4px
 .adet-gost { font-size: 24px; font-weight: 700; min-width: 40px; text-align: center; }
 
 .porsiyon-duzen-liste { display: flex; flex-direction: column; gap: 8px; }
-.porsiyon-duzen-satir { display: grid; grid-template-columns: 1fr 90px 90px auto; gap: 8px; align-items: center; }
+.porsiyon-duzen-satir { display: grid; grid-template-columns: 1fr 72px 72px 84px auto; gap: 6px; align-items: center; }
 .porsiyon-duzen-satir input { margin-bottom: 0; }
 
 /* ============ Uygulama kabuğu: sol menü + tam ekran ============ */

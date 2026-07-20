@@ -24,6 +24,10 @@ const db = getFirestore(app);
 export function kurusYaz(kurus) {
   return (kurus / 100).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ₺";
 }
+// Stok sayısını okunur yazar (kesirli olabilir: açık şişe → 9,85 gibi).
+export function stokYaz(n) {
+  return (Number(n) || 0).toLocaleString("tr-TR", { maximumFractionDigits: 2 });
+}
 function simdi() { return new Date().toISOString(); }
 function epostaYap(kullaniciAdi) { return kullaniciAdi.trim().toLowerCase() + EPOSTA_SONEKI; }
 
@@ -224,7 +228,9 @@ export async function siparisEkle(aktor, adisyonId, urun, adet, secenek, not) {
   const fiyat = secenek ? secenek.satisFiyatiKurus : urun.satisFiyatiKurus;
   const maliyet = secenek ? secenek.maliyetKurus : urun.maliyetKurus;
   const stokTakip = urun.stokTakip !== false;
-  if (stokTakip && adet > urun.stokAdedi) throw new Error("Stok yetersiz.");
+  // Şişe oranı: porsiyonda siseOrani varsa stoktan adet/orani düşer (10 duble = 1 şişe).
+  const stokDususu = secenek && secenek.siseOrani > 0 ? Math.round((adet / secenek.siseOrani) * 1000) / 1000 : adet;
+  if (stokTakip && stokDususu > urun.stokAdedi) throw new Error("Stok yetersiz.");
   const hareket = {
     urunId: urun.id, urunAdi: urun.ad, adet, birimFiyatKurus: fiyat,
     birimMaliyetKurus: maliyet, tip: "EKLE", kullaniciId: aktor.uid, zaman: simdi(),
@@ -233,7 +239,7 @@ export async function siparisEkle(aktor, adisyonId, urun, adet, secenek, not) {
   const notMetni = (not || "").trim();
   if (notMetni) hareket.not = notMetni;
   await addDoc(collection(db, "adisyonlar", adisyonId, "hareketler"), hareket);
-  if (stokTakip) await updateDoc(doc(db, "urunler", urun.id), { stokAdedi: increment(-adet) });
+  if (stokTakip) await updateDoc(doc(db, "urunler", urun.id), { stokAdedi: increment(-stokDususu) });
   // Bugünün cirosu anlık artsın.
   await gunArtir({
     ciroKurus: increment(fiyat * adet), maliyetKurus: increment(maliyet * adet),
@@ -260,8 +266,16 @@ export async function siparisIptal(aktor, adisyonId, satir, adet, sebep) {
   await addDoc(collection(db, "adisyonlar", adisyonId, "hareketler"), hareket);
   // Stok takibi kapalı ürünlerde iptalde de stok değişmez.
   const urunAnlik = await getDoc(doc(db, "urunler", satir.urunId));
-  const stokTakip = urunAnlik.exists() ? urunAnlik.data().stokTakip !== false : true;
-  if (stokTakip) await updateDoc(doc(db, "urunler", satir.urunId), { stokAdedi: increment(adet) });
+  const urunData = urunAnlik.exists() ? urunAnlik.data() : null;
+  const stokTakip = urunData ? urunData.stokTakip !== false : true;
+  // İptalde stok, o porsiyonun şişe oranına göre geri döner.
+  let orani = 1;
+  if (satir.secenek && urunData && Array.isArray(urunData.secenekler)) {
+    const p = urunData.secenekler.find((s) => s.ad === satir.secenek);
+    if (p && p.siseOrani > 0) orani = p.siseOrani;
+  }
+  const stokArtis = Math.round((adet / orani) * 1000) / 1000;
+  if (stokTakip) await updateDoc(doc(db, "urunler", satir.urunId), { stokAdedi: increment(stokArtis) });
   // İptal, bugünün cirosundan düşülsün.
   await gunArtir({
     ciroKurus: increment(-satir.birimFiyatKurus * adet), maliyetKurus: increment(-satir.birimMaliyetKurus * adet),

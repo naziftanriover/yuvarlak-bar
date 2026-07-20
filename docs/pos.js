@@ -195,7 +195,7 @@ export function seceneklerDuzenlePenceresi(baslik, mevcut) {
     const h = document.createElement("h3"); h.className = "pencere-baslik"; h.textContent = baslik;
     kutu.appendChild(h);
     const bilgi = document.createElement("div"); bilgi.className = "pencere-etiket";
-    bilgi.textContent = "Porsiyon adı + satış ve maliyet (TL). Boş bırakırsan ürün tek fiyatlı olur.";
+    bilgi.innerHTML = "Porsiyon adı + satış ve maliyet (TL). <b>Şişe</b> = kaç adet 1 şişe eder (Tek→20, Duble→10, Şişe→1). Boş/1 = her satış 1 stok düşer. Porsiyon eklemezsen ürün tek fiyatlı olur.";
     kutu.appendChild(bilgi);
 
     const liste = document.createElement("div"); liste.className = "porsiyon-duzen-liste";
@@ -208,9 +208,11 @@ export function seceneklerDuzenlePenceresi(baslik, mevcut) {
       if (s.satisFiyatiKurus != null) sat.value = (s.satisFiyatiKurus / 100).toFixed(2);
       const mal = document.createElement("input"); mal.type = "number"; mal.step = "0.01"; mal.min = "0"; mal.placeholder = "Maliyet ₺";
       if (s.maliyetKurus != null) mal.value = (s.maliyetKurus / 100).toFixed(2);
+      const sise = document.createElement("input"); sise.type = "number"; sise.step = "1"; sise.min = "1"; sise.placeholder = "Şişe (kaç=1)";
+      if (s.siseOrani != null) sise.value = s.siseOrani;
       const sil = document.createElement("button"); sil.className = "dugme-kirmizi dugme-kucuk"; sil.textContent = "Sil";
       sil.onclick = () => satir.remove();
-      satir.append(ad, sat, mal, sil);
+      satir.append(ad, sat, mal, sise, sil);
       liste.appendChild(satir);
     }
     (Array.isArray(mevcut) && mevcut.length ? mevcut : []).forEach(satirEkle);
@@ -226,14 +228,15 @@ export function seceneklerDuzenlePenceresi(baslik, mevcut) {
     kaydet.onclick = () => {
       const sonuc = [];
       for (const satir of liste.querySelectorAll(".porsiyon-duzen-satir")) {
-        const [ad, sat, mal] = satir.querySelectorAll("input");
+        const [ad, sat, mal, sise] = satir.querySelectorAll("input");
         const adT = ad.value.trim();
         if (!adT && !sat.value && !mal.value) continue; // tamamen boş satır: atla
         const sf = parseFloat(sat.value), mf = parseFloat(mal.value);
         if (!adT) { hataEl.textContent = "Porsiyon adı boş olamaz."; hataEl.classList.remove("gizli"); return; }
         if (!(sf >= 0)) { hataEl.textContent = adT + ": geçerli satış fiyatı girin."; hataEl.classList.remove("gizli"); return; }
         if (!(mf >= 0)) { hataEl.textContent = adT + ": geçerli maliyet girin."; hataEl.classList.remove("gizli"); return; }
-        sonuc.push({ ad: adT, satisFiyatiKurus: Math.round(sf * 100), maliyetKurus: Math.round(mf * 100) });
+        const so = parseInt(sise.value, 10);
+        sonuc.push({ ad: adT, satisFiyatiKurus: Math.round(sf * 100), maliyetKurus: Math.round(mf * 100), siseOrani: (so > 0 ? so : 1) });
       }
       kapat(); coz(sonuc);
     };

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Yuvarlak Bar — Satış</title>
-  <link rel="stylesheet" href="stil.css?v=4" />
+  <link rel="stylesheet" href="stil.css?v=5" />
 </head>
 <body>
   <div class="uygulama">
@@ -121,7 +121,7 @@
 
   <script type="module">
     import {
-      korumaVeProfil, cikisYap, sifreDegistirAkisi, kurusYaz,
+      korumaVeProfil, cikisYap, sifreDegistirAkisi, kurusYaz, stokYaz,
       urunleriGetir, urunEkle, urunSeceneklerGuncelle, fiyatGuncelle, malGirisi, stokSayimi, urunDurum,
       kategorileriGetir, kategoriEkle, kategoriAdDegistir, kategoriDurum, kategoriSirala, kategorileriIceAktar,
       masalariGetir, masaEkle, masaAdDegistir, masayaAdisyonAc, masaBirlestir, masaBosalt,
@@ -322,7 +322,7 @@
         row.className = "satir";
         const porsiyonSayi = Array.isArray(u.secenekler) ? u.secenekler.length : 0;
         const fiyatMetni = porsiyonSayi ? porsiyonSayi + " porsiyon" : kurusYaz(u.satisFiyatiKurus);
-        const stokMetni = u.stokTakip === false ? "stok takipsiz" : "stok: " + u.stokAdedi;
+        const stokMetni = u.stokTakip === false ? "stok takipsiz" : "stok: " + stokYaz(u.stokAdedi) + " şişe";
         row.innerHTML = "<span><b>" + u.ad + "</b> <span class='alt' style='color:var(--soluk)'>· " + fiyatMetni + " · " + stokMetni + (u.aktif ? "" : " · pasif") + "</span></span>";
         const sag = document.createElement("span");
         sag.style.display = "flex"; sag.style.gap = "6px"; sag.style.flexWrap = "wrap";
