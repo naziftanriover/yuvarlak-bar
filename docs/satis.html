@@ -65,6 +65,7 @@
           <h3>Adisyon</h3>
           <div id="ozetSatirlar" class="adisyon-liste"></div>
           <div class="adisyon-toplam"><span>Toplam</span><span id="ciro" class="deger-vurgu"></span></div>
+          <div class="adisyon-ara gizli" id="iskontoSatir"><span>İskonto</span><span id="iskonto" style="color:#d98a3a"></span></div>
           <div class="adisyon-ara"><span>Ödenen</span><span id="odenen"></span></div>
           <div class="adisyon-ara" style="padding-left:12px;"><span>• Nakit</span><span id="odNakit"></span></div>
           <div class="adisyon-ara" style="padding-left:12px;"><span>• Kart</span><span id="odKart"></span></div>
@@ -86,6 +87,17 @@
               <div style="display:flex; gap:10px;">
                 <button class="dugme" style="flex:1" id="btnOdemeVaz">Vazgeç</button>
                 <button class="dugme-vurgu" style="flex:1" id="btnOdemeOnay">Onayla</button>
+              </div>
+            </div>
+            <div style="margin-top:12px;">
+              <button class="dugme-blok" id="btnIskonto">🏷️ İskonto (TL)</button>
+              <div id="iskontoGir" class="gizli" style="margin-top:8px;">
+                <label>İskonto tutarı (TL)</label>
+                <input id="iskontoTutar" type="number" step="0.01" min="0" />
+                <div style="display:flex; gap:10px;">
+                  <button class="dugme" style="flex:1" id="btnIskontoVaz">Vazgeç</button>
+                  <button class="dugme-vurgu" style="flex:1" id="btnIskontoOnay">Uygula</button>
+                </div>
               </div>
             </div>
             <button class="dugme-blok" style="margin-top:12px" id="btnFis">🧾 Fiş yazdır</button>
@@ -116,7 +128,7 @@
     import {
       korumaVeProfil, kurusYaz,
       urunleriGetir, kategorileriGetir, masalariGetir, masayaAdisyonAc, masaBirlestir, masaBosalt,
-      adisyonOzet, siparisIptal, odemeAl, hesapKapat, ODEME_YONTEMI, bugunGetir, ekranYaz,
+      adisyonOzet, siparisIptal, odemeAl, hesapKapat, ODEME_YONTEMI, bugunGetir, ekranYaz, iskontoUygula,
     } from "./uygulama.js";
     import { posUrunPaneli, posAdisyonCiz, satirEtiketi } from "./pos.js";
     import { kabukKur } from "./kabuk.js";
@@ -130,6 +142,7 @@
     let seciliAdisyonId = null;
     let seciliMasa = null;
     let mevcutKalan = 0;
+    let sonIskonto = 0;
     let seciliYontem = null;
 
     const el = (id) => document.getElementById(id);
@@ -205,6 +218,13 @@
       const ozet = await adisyonOzet(seciliAdisyonId);
       posAdisyonCiz(el("ozetSatirlar"), ozet.satirlar, { iptalEt });
       el("ciro").textContent = kurusYaz(ozet.ciroKurus);
+      if (ozet.iskontoKurus > 0) {
+        el("iskontoSatir").classList.remove("gizli");
+        el("iskonto").textContent = "−" + kurusYaz(ozet.iskontoKurus);
+      } else {
+        el("iskontoSatir").classList.add("gizli");
+      }
+      sonIskonto = ozet.iskontoKurus || 0;
       el("odenen").textContent = kurusYaz(ozet.odenenKurus);
       el("odNakit").textContent = kurusYaz(ozet.nakitKurus);
       el("odKart").textContent = kurusYaz(ozet.kartKurus);
@@ -215,7 +235,8 @@
         durum: "HESAP",
         masaAd: seciliMasa ? seciliMasa.ad : "",
         satirlar: ozet.satirlar.map((s) => ({ ad: satirEtiketi(s), adet: s.netAdet, tutarKurus: s.araToplamKurus })),
-        toplamKurus: ozet.ciroKurus, odenenKurus: ozet.odenenKurus, kalanKurus: ozet.kalanKurus,
+        toplamKurus: ozet.ciroKurus, iskontoKurus: ozet.iskontoKurus || 0, netTutarKurus: ozet.netTutarKurus,
+        odenenKurus: ozet.odenenKurus, kalanKurus: ozet.kalanKurus,
       });
       bugunCip();
     }
@@ -273,7 +294,11 @@
           s += "<div class='fis-satir'><span>" + st.netAdet + "x " + satirEtiketi(st) + "</span><span>" + kurusYaz(st.araToplamKurus) + "</span></div>";
         }
         s += "<div class='fis-cizgi'></div>";
-        s += "<div class='fis-satir fis-toplam'><span>TOPLAM</span><span>" + kurusYaz(ozet.ciroKurus) + "</span></div>";
+        if (ozet.iskontoKurus > 0) {
+          s += "<div class='fis-satir'><span>Ara Toplam</span><span>" + kurusYaz(ozet.ciroKurus) + "</span></div>";
+          s += "<div class='fis-satir'><span>Iskonto</span><span>-" + kurusYaz(ozet.iskontoKurus) + "</span></div>";
+        }
+        s += "<div class='fis-satir fis-toplam'><span>TOPLAM</span><span>" + kurusYaz(ozet.netTutarKurus) + "</span></div>";
         if (ozet.odenenKurus > 0) {
           s += "<div class='fis-satir'><span>Odenen</span><span>" + kurusYaz(ozet.odenenKurus) + "</span></div>";
           s += "<div class='fis-satir'><span>Kalan</span><span>" + kurusYaz(ozet.kalanKurus) + "</span></div>";
@@ -282,6 +307,25 @@
         s += "<div class='fis-tesekkur'>Tesekkur ederiz!</div>";
         el("fis").innerHTML = s.replace(/₺/g, "TL");
         window.print();
+      } catch (h) { mesaj(h.message); }
+    }
+
+    // İskonto (TL bazlı indirim): mevcut iskontoyu göster/düzenle.
+    function iskontoAc() {
+      if (!seciliAdisyonId) { mesaj("Önce masa seçin."); return; }
+      el("iskontoTutar").value = (sonIskonto / 100).toFixed(2);
+      el("iskontoGir").classList.remove("gizli");
+      el("iskontoTutar").focus(); el("iskontoTutar").select();
+    }
+    async function iskontoOnay() {
+      const tl = parseFloat(el("iskontoTutar").value);
+      if (!(tl >= 0)) { mesaj("Geçerli tutar girin."); return; }
+      const kurus = Math.round(tl * 100);
+      try {
+        await iskontoUygula(profil, seciliAdisyonId, kurus);
+        el("iskontoGir").classList.add("gizli");
+        await ozetYukle();
+        bilgi(kurus > 0 ? ("İskonto uygulandı: " + kurusYaz(kurus)) : "İskonto kaldırıldı.");
       } catch (h) { mesaj(h.message); }
     }
 
@@ -348,6 +392,9 @@
     el("btnKartSec").onclick = () => odemeGirAc(ODEME_YONTEMI.KART);
     el("btnOdemeVaz").onclick = () => el("odemeGir").classList.add("gizli");
     el("btnOdemeOnay").onclick = odemeOnay;
+    el("btnIskonto").onclick = iskontoAc;
+    el("btnIskontoVaz").onclick = () => el("iskontoGir").classList.add("gizli");
+    el("btnIskontoOnay").onclick = iskontoOnay;
     el("btnFis").onclick = fisYazdir;
     el("btnCekmece").onclick = cekmeceAc;
     el("btnKapat").onclick = kapat;

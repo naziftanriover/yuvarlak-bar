@@ -209,7 +209,7 @@ export async function odemeleriGetir(adisyonId) {
   const anlik = await getDocs(collection(db, "adisyonlar", adisyonId, "odemeler"));
   return anlik.docs.map((d) => d.data());
 }
-export function ozetHesapla(hareketler, odemeler) {
+export function ozetHesapla(hareketler, odemeler, iskontoKurus = 0) {
   let ciro = 0, maliyet = 0;
   const gruplar = new Map();
   for (const h of hareketler) {
@@ -228,11 +228,34 @@ export function ozetHesapla(hareketler, odemeler) {
   const kart = odemeler.filter((o) => o.yontem === "KART").reduce((t, o) => t + o.tutarKurus, 0);
   const satirlar = [...gruplar.values()].filter((g) => g.netAdet > 0).map((g) => ({ ...g, araToplamKurus: g.netAdet * g.birimFiyatKurus }));
   const odemeGecmisi = [...odemeler].sort((a, b) => (a.zaman || "").localeCompare(b.zaman || ""));
-  return { satirlar, ciroKurus: ciro, maliyetKurus: maliyet, karKurus: ciro - maliyet, odenenKurus: odenen, nakitKurus: nakit, kartKurus: kart, kalanKurus: ciro - odenen, odemeler: odemeGecmisi };
+  const isk = iskontoKurus || 0;
+  const netTutar = ciro - isk; // iskonto sonrası ödenecek tutar
+  return {
+    satirlar, ciroKurus: ciro, iskontoKurus: isk, netTutarKurus: netTutar,
+    maliyetKurus: maliyet, karKurus: netTutar - maliyet,
+    odenenKurus: odenen, nakitKurus: nakit, kartKurus: kart,
+    kalanKurus: netTutar - odenen, odemeler: odemeGecmisi,
+  };
 }
 export async function adisyonOzet(adisyonId) {
-  const [h, o] = await Promise.all([hareketleriGetir(adisyonId), odemeleriGetir(adisyonId)]);
-  return ozetHesapla(h, o);
+  const [snap, h, o] = await Promise.all([
+    getDoc(doc(db, "adisyonlar", adisyonId)), hareketleriGetir(adisyonId), odemeleriGetir(adisyonId),
+  ]);
+  const iskonto = snap.exists() ? (snap.data().iskontoKurus || 0) : 0;
+  return ozetHesapla(h, o, iskonto);
+}
+
+// İskonto (TL bazlı indirim): adisyona yazılır, günün cirosu/kârı fark kadar düşer, denetime kaydolur.
+export async function iskontoUygula(aktor, adisyonId, yeniIskontoKurus) {
+  if (!(yeniIskontoKurus >= 0)) throw new Error("Geçerli iskonto tutarı girin.");
+  const ref = doc(db, "adisyonlar", adisyonId);
+  const snap = await getDoc(ref);
+  const eski = (snap.exists() && snap.data().iskontoKurus) ? snap.data().iskontoKurus : 0;
+  if (yeniIskontoKurus === eski) return;
+  await updateDoc(ref, { iskontoKurus: yeniIskontoKurus });
+  const fark = yeniIskontoKurus - eski; // ciro/kâr bu kadar düşer
+  await gunArtir({ ciroKurus: increment(-fark), karKurus: increment(-fark) });
+  await denetimEkle(aktor, "ISKONTO", `İskonto: ${kurusYaz(eski)} → ${kurusYaz(yeniIskontoKurus)}`);
 }
 
 // Müşteri ekranı (2. monitör) için canlı durum. ekran/aktif dokümanına yazar;
@@ -394,18 +417,19 @@ export async function gunKapanislariGetir() {
 export async function gecelikOzet(bas, bit) {
   const s = query(collection(db, "adisyonlar"), where("durum", "==", "KAPALI"), where("kapanisZamani", ">=", bas), where("kapanisZamani", "<=", bit));
   const anlik = await getDocs(s);
-  let adisyonSayisi = 0, ciro = 0, maliyet = 0, nakit = 0, kart = 0;
+  let adisyonSayisi = 0, ciro = 0, maliyet = 0, iskonto = 0, nakit = 0, kart = 0;
   for (const d of anlik.docs) {
     adisyonSayisi++;
+    const isk = d.data().iskontoKurus || 0;
     const [h, o] = await Promise.all([hareketleriGetir(d.id), odemeleriGetir(d.id)]);
-    const oz = ozetHesapla(h, o);
-    ciro += oz.ciroKurus; maliyet += oz.maliyetKurus;
+    const oz = ozetHesapla(h, o, isk);
+    ciro += oz.netTutarKurus; maliyet += oz.maliyetKurus; iskonto += oz.iskontoKurus; // ciro = iskonto sonrası net
     for (const od of o) {
       if (od.yontem === "NAKIT") nakit += od.tutarKurus;
       else if (od.yontem === "KART") kart += od.tutarKurus;
     }
   }
-  return { adisyonSayisi, ciroKurus: ciro, maliyetKurus: maliyet, karKurus: ciro - maliyet, nakitKurus: nakit, kartKurus: kart };
+  return { adisyonSayisi, ciroKurus: ciro, iskontoKurus: iskonto, maliyetKurus: maliyet, karKurus: ciro - maliyet, nakitKurus: nakit, kartKurus: kart };
 }
 export async function iptalDenetimi(bas, bit) {
   const s = query(collectionGroup(db, "hareketler"), where("tip", "==", "IPTAL"), where("zaman", ">=", bas), where("zaman", "<=", bit));

@@ -70,6 +70,7 @@
       </div>
       <div class="h-liste" id="hListe"></div>
       <div class="h-alt">
+        <div class="h-odeme" id="hIskonto" style="display:none;"><span>İskonto: <b id="hIskontoDeger" style="color:#ffcf6b">0,00 ₺</b></span></div>
         <div class="h-toplam"><span class="et">TOPLAM</span><span class="dg" id="hToplam">0,00 ₺</span></div>
         <div class="h-odeme" id="hOdeme" style="display:none;">
           <span>Ödenen: <b id="hOdenen">0,00 ₺</b></span>
@@ -101,7 +102,10 @@
                         '<span class="tut">' + tl(s.tutarKurus) + '</span>';
         liste.appendChild(row);
       }
-      el("hToplam").textContent = tl(v.toplamKurus);
+      const isk = v.iskontoKurus || 0;
+      el("hToplam").textContent = tl(isk > 0 ? v.netTutarKurus : v.toplamKurus);
+      if (isk > 0) { el("hIskonto").style.display = "flex"; el("hIskontoDeger").textContent = "−" + tl(isk); }
+      else { el("hIskonto").style.display = "none"; }
       // Kısmi ödeme varsa ödenen/kalan göster
       if ((v.odenenKurus||0) > 0){
         el("hOdeme").style.display = "flex";
