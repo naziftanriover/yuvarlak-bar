@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Yuvarlak Bar — Giriş</title>
-  <link rel="stylesheet" href="/stil.css" />
+  <link rel="stylesheet" href="stil.css" />
 </head>
 <body>
   <div class="kapsayici">
@@ -26,9 +26,9 @@
     import { girisYap, mevcutProfil, ROL } from "./uygulama.js";
 
     function yonlendir(rol) {
-      if (rol === ROL.PATRON) location.href = "/rapor.html";
-      else if (rol === ROL.GARSON) location.href = "/siparis.html";
-      else location.href = "/satis.html";
+      if (rol === ROL.PATRON) location.href = "rapor.html";
+      else if (rol === ROL.GARSON) location.href = "siparis.html";
+      else location.href = "satis.html";
     }
     function mesaj(metin) {
       const k = document.getElementById("mesaj");

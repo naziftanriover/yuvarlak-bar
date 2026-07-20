@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Yuvarlak Bar — Rapor</title>
-  <link rel="stylesheet" href="/stil.css" />
+  <link rel="stylesheet" href="stil.css" />
 </head>
 <body>
   <div class="baslik">
@@ -75,7 +75,7 @@
 
     const profil = await korumaVeProfil();
     document.getElementById("kim").textContent = profil.ad + " (" + profil.rol + ")";
-    document.getElementById("btnKul").onclick = () => location.href = "/kullanicilar.html";
+    document.getElementById("btnKul").onclick = () => location.href = "kullanicilar.html";
     document.getElementById("btnSifre").onclick = sifreDegistirAkisi;
     document.getElementById("btnCikis").onclick = cikisYap;
 

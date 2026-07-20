@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Yuvarlak Bar — Kullanıcılar</title>
-  <link rel="stylesheet" href="/stil.css" />
+  <link rel="stylesheet" href="stil.css" />
 </head>
 <body>
   <div class="baslik">
@@ -18,7 +18,7 @@
 
   <div class="kapsayici">
     <div id="mesaj" class="mesaj gizli"></div>
-    <a href="/rapor.html" class="geri" style="display:inline-block; text-decoration:none;">← Rapora dön</a>
+    <a href="rapor.html" class="geri" style="display:inline-block; text-decoration:none;">← Rapora dön</a>
 
     <div class="bolum">
       <h2>Yeni kullanıcı ekle</h2>
@@ -51,7 +51,7 @@
     document.getElementById("btnCikis").onclick = cikisYap;
 
     // Sadece patron yönetebilir.
-    if (!yetkiVar(profil.rol, "KULLANICI")) { location.href = "/rapor.html"; }
+    if (!yetkiVar(profil.rol, "KULLANICI")) { location.href = "rapor.html"; }
 
     function mesaj(m, tur) { const k = document.getElementById("mesaj"); k.textContent = m; k.className = "mesaj " + (tur || "hata"); }
 

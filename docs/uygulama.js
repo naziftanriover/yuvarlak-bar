@@ -32,7 +32,7 @@ export function girisYap(kullaniciAdi, sifre) {
   return signInWithEmailAndPassword(auth, epostaYap(kullaniciAdi), sifre);
 }
 export function cikisYap() {
-  signOut(auth).finally(() => { window.location.href = "/giris.html"; });
+  signOut(auth).finally(() => { window.location.href = "giris.html"; });
 }
 async function profilGetir(uid) {
   const anlik = await getDoc(doc(db, "kullanicilar", uid));
@@ -42,7 +42,7 @@ async function profilGetir(uid) {
 export function korumaVeProfil() {
   return new Promise((coz) => {
     onAuthStateChanged(auth, async (kullanici) => {
-      if (!kullanici) { window.location.href = "/giris.html"; return; }
+      if (!kullanici) { window.location.href = "giris.html"; return; }
       const profil = await profilGetir(kullanici.uid);
       if (!profil || profil.aktif === false) { cikisYap(); return; }
       coz(profil);
