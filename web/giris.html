@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Yuvarlak Bar — Giriş</title>
+  <link rel="stylesheet" href="/stil.css" />
+</head>
+<body>
+  <div class="kapsayici">
+    <div class="bolum giris-kutu">
+      <div class="logo">Yuvarlak <span>Bar</span></div>
+      <div class="alt-baslik">Satış Otomasyonu</div>
+      <div id="mesaj" class="mesaj gizli"></div>
+      <form id="girisForm">
+        <label for="kullaniciAdi">Kullanıcı adı</label>
+        <input id="kullaniciAdi" autocomplete="username" required />
+        <label for="sifre">Şifre</label>
+        <input id="sifre" type="password" autocomplete="current-password" required />
+        <button type="submit" class="dugme-vurgu dugme-blok">Giriş yap</button>
+      </form>
+    </div>
+  </div>
+
+  <script type="module">
+    import { girisYap, mevcutProfil, ROL } from "./uygulama.js";
+
+    function yonlendir(rol) {
+      if (rol === ROL.PATRON) location.href = "/rapor.html";
+      else if (rol === ROL.GARSON) location.href = "/siparis.html";
+      else location.href = "/satis.html";
+    }
+    function mesaj(metin) {
+      const k = document.getElementById("mesaj");
+      k.textContent = metin; k.className = "mesaj hata";
+    }
+
+    // Zaten girişliyse yönlendir.
+    mevcutProfil().then((p) => { if (p && p.aktif !== false) yonlendir(p.rol); });
+
+    document.getElementById("girisForm").addEventListener("submit", async (olay) => {
+      olay.preventDefault();
+      const kullaniciAdi = document.getElementById("kullaniciAdi").value;
+      const sifre = document.getElementById("sifre").value;
+      try {
+        await girisYap(kullaniciAdi, sifre);
+        const p = await mevcutProfil();
+        if (!p) { mesaj("Kullanıcı kaydı bulunamadı."); return; }
+        if (p.aktif === false) { mesaj("Hesabınız pasif."); return; }
+        yonlendir(p.rol);
+      } catch (hata) {
+        mesaj("Kullanıcı adı veya şifre hatalı.");
+      }
+    });
+  </script>
+</body>
+</html>

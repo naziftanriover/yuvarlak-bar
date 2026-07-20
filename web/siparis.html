@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Yuvarlak Bar — Sipariş</title>
+  <link rel="stylesheet" href="/stil.css" />
+</head>
+<body>
+  <div class="baslik">
+    <h1><span class="marka">Yuvarlak Bar</span> · Sipariş</h1>
+    <div>
+      <span class="kim" id="kim"></span>
+      <button class="dugme-kucuk" id="btnSifre">Şifre</button>
+      <button class="dugme-kucuk" id="btnCikis">Çıkış</button>
+    </div>
+  </div>
+
+  <div class="kapsayici">
+    <div id="mesaj" class="mesaj gizli"></div>
+
+    <div id="masaGorunum">
+      <div class="bolum">
+        <h2>Masalar — birini seçin</h2>
+        <div id="masaIzgara" class="izgara"></div>
+      </div>
+    </div>
+
+    <div id="detayGorunum" class="gizli">
+      <button class="geri" id="btnGeri">← Masalara dön</button>
+      <div class="bolum">
+        <h2 id="detayBaslik">Masa</h2>
+        <div id="ozetSatirlar"></div>
+        <div class="ozet-satir buyuk"><span>Toplam</span><span id="ciro" class="deger-vurgu"></span></div>
+      </div>
+      <div class="bolum">
+        <h2>Ürün ekle</h2>
+        <div style="margin-bottom:10px; max-width:160px;">
+          <label>Adet</label><input id="adetSecim" type="number" min="1" value="1" />
+        </div>
+        <div id="urunIzgara" class="izgara"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import {
+      korumaVeProfil, cikisYap, sifreDegistirAkisi, kurusYaz,
+      urunleriGetir, masalariGetir, masayaAdisyonAc, adisyonOzet, siparisEkle, siparisIptal,
+    } from "./uygulama.js";
+
+    const profil = await korumaVeProfil();
+    document.getElementById("kim").textContent = profil.ad + " (" + profil.rol + ")";
+    document.getElementById("btnSifre").onclick = sifreDegistirAkisi;
+    document.getElementById("btnCikis").onclick = cikisYap;
+
+    let urunler = [], seciliAdisyonId = null;
+    function mesaj(m) { const k = document.getElementById("mesaj"); k.textContent = m; k.className = "mesaj hata"; }
+    function mesajGizle() { document.getElementById("mesaj").className = "mesaj gizli"; }
+
+    async function yukle() {
+      mesajGizle();
+      try {
+        const [masalar, aktif] = await Promise.all([masalariGetir(), urunleriGetir(true)]);
+        urunler = aktif; masalariCiz(masalar);
+      } catch (h) { mesaj(h.message); }
+    }
+    function masalariCiz(masalar) {
+      const iz = document.getElementById("masaIzgara");
+      iz.innerHTML = masalar.length ? "" : '<div class="kart alt">Henüz masa yok.</div>';
+      for (const masa of masalar) {
+        const dolu = masa.durum === "DOLU";
+        const b = document.createElement("button");
+        b.className = "masa " + (dolu ? "dolu" : "bos");
+        b.innerHTML = '<span>' + masa.ad + '</span><span class="durum">' + (dolu ? "Dolu" : "Boş") + '</span>';
+        b.onclick = () => masaSec(masa);
+        iz.appendChild(b);
+      }
+    }
+    async function masaSec(masa) {
+      mesajGizle();
+      try {
+        let adisyonId = masa.acikAdisyonId;
+        if (masa.durum !== "DOLU") adisyonId = await masayaAdisyonAc(profil, masa);
+        seciliAdisyonId = adisyonId;
+        document.getElementById("detayBaslik").textContent = masa.ad;
+        gorunum(true); urunButonlari(); await ozetYukle();
+      } catch (h) { mesaj(h.message); }
+    }
+    function urunButonlari() {
+      const iz = document.getElementById("urunIzgara");
+      iz.innerHTML = urunler.length ? "" : '<div class="kart alt">Henüz ürün yok.</div>';
+      for (const urun of urunler) {
+        const b = document.createElement("button");
+        b.className = "kart";
+        b.innerHTML = '<span class="ad">' + urun.ad + '</span><span class="alt">' + kurusYaz(urun.satisFiyatiKurus) + '</span>';
+        b.onclick = () => siparisVer(urun);
+        iz.appendChild(b);
+      }
+    }
+    async function siparisVer(urun) {
+      const adet = parseInt(document.getElementById("adetSecim").value, 10) || 1;
+      try { await siparisEkle(profil, seciliAdisyonId, urun, adet); urun.stokAdedi -= adet; document.getElementById("adetSecim").value = 1; await ozetYukle(); }
+      catch (h) { mesaj(h.message); }
+    }
+    async function iptalEt(satir) {
+      const sebep = window.prompt("İptal sebebi (zorunlu):");
+      if (!sebep || !sebep.trim()) return;
+      try { await siparisIptal(profil, seciliAdisyonId, satir, 1, sebep); await ozetYukle(); } catch (h) { mesaj(h.message); }
+    }
+    async function ozetYukle() {
+      const ozet = await adisyonOzet(seciliAdisyonId);
+      const kap = document.getElementById("ozetSatirlar");
+      kap.innerHTML = ozet.satirlar.length ? "" : '<div class="satir"><span class="alt">Henüz sipariş yok.</span></div>';
+      for (const satir of ozet.satirlar) {
+        const el = document.createElement("div");
+        el.className = "satir";
+        el.innerHTML = '<span>' + satir.netAdet + ' × ' + satir.urunAdi + '</span><span style="display:flex; gap:10px; align-items:center;"><b>' + kurusYaz(satir.araToplamKurus) + '</b></span>';
+        const b = document.createElement("button");
+        b.className = "dugme-kirmizi dugme-kucuk"; b.textContent = "İptal";
+        b.onclick = () => iptalEt(satir);
+        el.querySelector("span:last-child").appendChild(b);
+        kap.appendChild(el);
+      }
+      document.getElementById("ciro").textContent = kurusYaz(ozet.ciroKurus);
+    }
+    function gorunum(detay) {
+      document.getElementById("detayGorunum").classList.toggle("gizli", !detay);
+      document.getElementById("masaGorunum").classList.toggle("gizli", detay);
+    }
+    document.getElementById("btnGeri").onclick = () => { seciliAdisyonId = null; gorunum(false); yukle(); };
+
+    yukle();
+  </script>
+</body>
+</html>
